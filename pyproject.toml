@@ -4,11 +4,13 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 authors = [
-    { name = "Giovanni Pecelli", email = "imgiovannipecelli@protonmail.com" }
-    { name = "Gianluca Pimpinelli", email = "..." }
+    { name = "Giovanni Pecelli", email = "imgiovannipecelli@protonmail.com" },
+    { name = "Gianluca Pimpinelli", email = "gianluca.pimpinelli@gmail.com" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "mazegenerator",
+]
 
 [project.scripts]
 pac-man = "pac_man:main"
@@ -16,3 +18,6 @@ pac-man = "pac_man:main"
 [build-system]
 requires = ["uv_build>=0.12.10,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.uv.sources]
+mazegenerator = { path = "mazegenerator-2.1.0-py3-none-any.whl" }
