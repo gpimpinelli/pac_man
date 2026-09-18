@@ -9,6 +9,27 @@ EVENT_DESTROY = 17         # DestroyNotify event
 EVENT_CLIENT_MESSAGE = 33  # ClientMessage event (WM_DELETE_WINDOW from window manager)
 STRUCTURE_NOTIFY_MASK = 1 << 17
 
+def rgb_to_mlx(r: int, g: int, b: int) -> int:
+    return (r << 16) | (g << 8) | b
+
+def draw_line(m, mlx_ptr, win_ptr, x0: int, y0: int, x1: int, y1: int, color: int) -> None:
+    dx = abs(x1 - x0)
+    dy = abs(y1 - y0)
+    sx = 1 if x0 < x1 else -1
+    sy = 1 if y0 < y1 else -1
+    err = dx - dy
+
+    while True:
+        m.mlx_pixel_put(mlx_ptr, win_ptr, x0, y0, color)
+        if x0 == x1 and y0 == y1:
+            break
+        e2 = 2 * err
+        if e2 > -dy:
+            err -= dy
+            x0 += sx
+        if e2 < dx:
+            err += dx
+            y0 += sy
 
 def graphic_mlx() -> None:
     # 1. Initialize MLX wrapper
@@ -17,7 +38,7 @@ def graphic_mlx() -> None:
     # 2. Initialize display connection
     mlx_ptr = m.mlx_init()
     screen_width, screen_height = 400, 400
-
+    color = rgb_to_mlx(255, 0, 0)
     # 3. Create window
     win_ptr = m.mlx_new_window(mlx_ptr, screen_width, screen_height, "Pac-Man 42")
 
@@ -40,6 +61,13 @@ def graphic_mlx() -> None:
     m.mlx_hook(win_ptr, EVENT_DESTROY, STRUCTURE_NOTIFY_MASK, close_game, None)
     m.mlx_hook(win_ptr, EVENT_CLIENT_MESSAGE, 0, close_game, None)
     m.mlx_hook(win_ptr, EVENT_CLIENT_MESSAGE, STRUCTURE_NOTIFY_MASK, close_game, None)
+
+    def update_game(data: object) -> int:
+        # Disegna una riga rossa diagonale dal punto (50, 50) al punto (350, 350)
+        draw_line(m, mlx_ptr, win_ptr, 50, 50, 350, 350, color)
+        return 0
+ 
+    m.mlx_loop_hook(mlx_ptr, update_game, None)
 
     # Hook keyboard events
     m.mlx_key_hook(win_ptr, on_key, None)

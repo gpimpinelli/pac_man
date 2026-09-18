@@ -9,3 +9,5 @@
     - is_entry
     - have_pacgum
     - have_super_pacgum
+
+The Spriters Resource
