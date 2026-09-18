@@ -1,9 +1,10 @@
 from mazegenerator import MazeGenerator
 
 def main() -> None:
-    maze = MazeGenerator()
+    maze = MazeGenerator(seed=42)
     repr(maze)
-    print(maze.hex())
+    for line in maze._maze:
+        print(line)
 
 # MazeGenerator(
     # size: tuple[int, int] = (15, 15), 

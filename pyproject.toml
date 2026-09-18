@@ -10,6 +10,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "mazegenerator",
+    "mlx",
 ]
 
 [project.scripts]
@@ -21,3 +22,4 @@ build-backend = "uv_build"
 
 [tool.uv.sources]
 mazegenerator = { path = "mazegenerator-2.1.0-py3-none-any.whl" }
+mlx = { path = "mlx-2.2/ubuntu/mlx-2.2-py3-none-any.whl" }
