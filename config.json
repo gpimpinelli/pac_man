@@ -1,16 +1,13 @@
 {
-    // general settings
     "highscore_filename": "highscores.json",
     "lives": 3,
     "seed": 42,
     "level_max_time": 90,
 
-    // Punteggi
     "points_per_pacgum": 10,
     "points_per_super_pacgum": 50,
     "points_per_ghost": 200,
      
-    // level definition
     "levels": [
         { "width": 15, "height": 15 },
         { "width": 15, "height": 15 },

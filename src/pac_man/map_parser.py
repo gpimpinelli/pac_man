@@ -1,15 +1,43 @@
-import io
 import json
 from pathlib import Path
 from pydantic import BaseModel, Field, model_validator
 
 
+NUMERIC_RULES: dict[str, dict[str, int]] = {
+    "lives": {"default": 3, "min": 1, "max": 9},
+    "seed": {"default": 42, "min": 0, "max": 2_147_483_647},
+    "level_max_time": {"default": 90, "min": 10, "max": 3600},
+    "points_per_pacgum": {"default": 10, "min": 0, "max": 100_000},
+    "points_per_super_pacgum": {"default": 50, "min": 0, "max": 100_000},
+    "points_per_ghost": {"default": 200, "min": 0, "max": 100_000},
+}
+
+
 class MapParser(BaseModel):
+    """
+    Parser and validator for Pac-Man JSON configuration files.
+    Loads JSON configuration files, strips line comments (# and //),
+    validates numeric constraints, and clamps invalid/missing settings
+    to safe defaults in accordance with project specifications.
+    Attributes:
+        path (Path): Path to the JSON configuration file.
+        json_data (dict): Validated configuration key-value pairs.
+    """
+
     path: Path
     json_data: dict = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def post_init(self) -> "MapParser":
+        """
+        Load and parse the JSON configuration file after initialization.
+        Reads the file, removes comments, decodes JSON, and validates
+        all configuration fields against game rules.
+        Returns:
+            MapParser: The validated MapParser instance.
+        Raises:
+            ValueError: If the file does not exist or contains invalid JSON.
+        """
         file_path = Path(self.path)
 
         if not file_path.is_file():
@@ -19,16 +47,156 @@ class MapParser(BaseModel):
         try:
             with file_path.open("r", encoding="utf-8") as f:
                 for line in f:
-                    line_clean = line.strip()
-                    if not line_clean or line_clean.startswith(("#", "//")):
+                    if "//" in line:
+                        line = line.split("//")[0]
+                    if "#" in line:
+                        line = line.split("#")[0]
+                    clean_line = line.strip()
+                    if not clean_line:
                         continue
-                    lines.append(line)
-
+                    lines.append(clean_line)
                 self.json_data = json.loads("\n".join(lines))
         except json.JSONDecodeError as e:
             raise ValueError(f"Error parsing JSON: {e}")
 
-        # Insert protected methnd for valid config json
+        self._validate_config()
 
         return self
+
+    def _validate_config(self) -> None:
+        """
+        Validate configuration values and clamp to safe defaults.
+        Ensures all expected numeric keys exist, fall within valid ranges,
+        checks highscore filename, and guarantees at least 10 valid levels.
+        """
+        # ====================================================================
+        #               Parsing numeric elements
+        # ====================================================================
+        for key, rule in NUMERIC_RULES.items():
+            value = self.json_data.get(key)
+            if value is None:
+                print(
+                    f"[CONFIG WARNING] Key '{key}' missing, "
+                    f"using default: {rule['default']}"
+                )
+                self.json_data[key] = rule["default"]
+                continue
+
+            if not isinstance(value, int) or isinstance(value, bool):
+                # '!r' calls repr() to show quotes and exact types
+                # in the warning log
+                print(
+                    f"[CONFIG WARNING] Invalid type for '{key}' ({value!r}), "
+                    f"using default: {rule['default']}"
+                )
+                self.json_data[key] = rule["default"]
+                continue
+
+            if value < rule["min"]:
+                print(
+                    f"[CONFIG WARNING] Value for '{key}' ({value}) "
+                    f"below minimum, clamped to: {rule['min']}"
+                )
+                self.json_data[key] = rule["min"]
+            elif value > rule["max"]:
+                print(
+                    f"[CONFIG WARNING] Value for '{key}' "
+                    f"({value}) exceeds maximum, clamped to: {rule['max']}"
+                )
+                self.json_data[key] = rule["max"]
+
+        # ====================================================================
+        #               Parsing elements that are not numbers
+        # ====================================================================
+        
+        # highscore_filename
+        hs_file = self.json_data.get("highscore_filename")
+        if not isinstance(hs_file, str) or not hs_file.strip():
+            print(
+                "[CONFIG WARNING] Key 'highscore_filename' missing or invalid, "
+                "using default: 'highscores.json'"
+            )
+            self.json_data["highscore_filename"] = "highscores.json"
+
+        # levels
+        levels_raw = self.json_data.get("levels")
+        if not isinstance(levels_raw, list):
+            print(
+                "[CONFIG WARNING] Key 'levels' is missing or not a list, "
+                "fallback to default levels generation."
+            )
+            levels_raw = []
+
+        validated_levels: list[dict[str, int]] = []
+        for i, lvl in enumerate(levels_raw):
+            if not isinstance(lvl, dict):
+                print(
+                    f"[CONFIG WARNING] Level #{i + 1} is not a valid object, "
+                    "defaulting to 15x15."
+                )
+                validated_levels.append({"width": 15, "height": 15})
+                continue
+
+            width = lvl.get("width")
+            height = lvl.get("height")
+
+            # Checking 'width': must be int, >= 15 and odd
+            if (not isinstance(width, int) or isinstance(width, bool)
+                    or width < 15):
+                print(
+                    f"[CONFIG WARNING] Level #{i + 1} "
+                    f"'width' ({width!r}) invalid, defaulting to 15."
+                )
+                width = 15
+            elif width % 2 == 0:
+                print(
+                    f"[CONFIG WARNING] Level #{i + 1} 'width' ({width}) "
+                    f"is even, adjusted to odd: {width + 1}."
+                )
+                width += 1
+
+            # Checking 'height': must be int, >= 15 and odd
+            if (not isinstance(height, int) or isinstance(height, bool)
+                    or height < 15):
+                print(
+                    f"[CONFIG WARNING] Level #{i + 1} "
+                    f"'height' ({height!r}) invalid, defaulting to 15."
+                )
+                height = 15
+            elif height % 2 == 0:
+                print(
+                    f"[CONFIG WARNING] Level #{i + 1} 'height' ({height}) "
+                    f"is even, adjusted to odd: {height + 1}."
+                )
+                height += 1
+
+            validated_levels.append({"width": width, "height": height})
+
+        while len(validated_levels) < 10:
+            lvl_num = len(validated_levels) + 1
+            # Assign size based on the current level
+            size = min(15 + (((lvl_num - 1) // 2) * 2), 25)
+            print(
+                f"[CONFIG WARNING] Levels count is below 10. "
+                f"Adding default level #{lvl_num} ({size}x{size})."
+            )
+            validated_levels.append({"width": size, "height": size})
+
+        self.json_data["levels"] = validated_levels
+
+
+if __name__ == "__main__":
+    import sys
+
+    config_file = (
+        sys.argv[1] if len(sys.argv) > 1 else "tests/test_config_faulty.json"
+    )
+
+    print(f"--- Test parsing di: {config_file} ---")
+    test_parser = MapParser(path=Path(config_file))
+
+    print("\nConfigurazione risultante:")
+    for k, v in test_parser.json_data.items():
+        print(f"  {k}: {v}")
+
 
