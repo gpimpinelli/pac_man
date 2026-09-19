@@ -13,28 +13,31 @@ NUMERIC_RULES: dict[str, dict[str, int]] = {
 }
 
 
-class MapParser(BaseModel):
-    """
-    Parser and validator for Pac-Man JSON configuration files.
+class ConfigParser(BaseModel):
+    """Parser and validator for Pac-Man JSON configuration files.
+
     Loads JSON configuration files, strips line comments (# and //),
     validates numeric constraints, and clamps invalid/missing settings
     to safe defaults in accordance with project specifications.
+
     Attributes:
         path (Path): Path to the JSON configuration file.
-        json_data (dict): Validated configuration key-value pairs.
+        data (dict): Validated configuration key-value pairs.
     """
 
     path: Path
-    json_data: dict = Field(default_factory=dict)
+    data: dict = Field(default_factory=dict)
 
     @model_validator(mode="after")
-    def post_init(self) -> "MapParser":
-        """
-        Load and parse the JSON configuration file after initialization.
+    def post_init(self) -> "ConfigParser":
+        """Load and parse the JSON configuration file after initialization.
+
         Reads the file, removes comments, decodes JSON, and validates
         all configuration fields against game rules.
+
         Returns:
-            MapParser: The validated MapParser instance.
+            ConfigParser: The validated ConfigParser instance.
+
         Raises:
             ValueError: If the file does not exist or contains invalid JSON.
         """
@@ -55,7 +58,7 @@ class MapParser(BaseModel):
                     if not clean_line:
                         continue
                     lines.append(clean_line)
-                self.json_data = json.loads("\n".join(lines))
+                self.data = json.loads("\n".join(lines))
         except json.JSONDecodeError as e:
             raise ValueError(f"Error parsing JSON: {e}")
 
@@ -64,22 +67,20 @@ class MapParser(BaseModel):
         return self
 
     def _validate_config(self) -> None:
-        """
-        Validate configuration values and clamp to safe defaults.
+        """Validate configuration values and clamp to safe defaults.
+
         Ensures all expected numeric keys exist, fall within valid ranges,
         checks highscore filename, and guarantees at least 10 valid levels.
         """
-        # ====================================================================
-        #               Parsing numeric elements
-        # ====================================================================
+        # Parsing numeric elements
         for key, rule in NUMERIC_RULES.items():
-            value = self.json_data.get(key)
+            value = self.data.get(key)
             if value is None:
                 print(
                     f"[CONFIG WARNING] Key '{key}' missing, "
                     f"using default: {rule['default']}"
                 )
-                self.json_data[key] = rule["default"]
+                self.data[key] = rule["default"]
                 continue
 
             if not isinstance(value, int) or isinstance(value, bool):
@@ -89,7 +90,7 @@ class MapParser(BaseModel):
                     f"[CONFIG WARNING] Invalid type for '{key}' ({value!r}), "
                     f"using default: {rule['default']}"
                 )
-                self.json_data[key] = rule["default"]
+                self.data[key] = rule["default"]
                 continue
 
             if value < rule["min"]:
@@ -97,29 +98,30 @@ class MapParser(BaseModel):
                     f"[CONFIG WARNING] Value for '{key}' ({value}) "
                     f"below minimum, clamped to: {rule['min']}"
                 )
-                self.json_data[key] = rule["min"]
+                self.data[key] = rule["min"]
             elif value > rule["max"]:
                 print(
                     f"[CONFIG WARNING] Value for '{key}' "
                     f"({value}) exceeds maximum, clamped to: {rule['max']}"
                 )
-                self.json_data[key] = rule["max"]
+                self.data[key] = rule["max"]
 
+        # Parsing elements that are not numbers
         # ====================================================================
-        #               Parsing elements that are not numbers
+        #                        highscore_filename
         # ====================================================================
-        
-        # highscore_filename
-        hs_file = self.json_data.get("highscore_filename")
+        hs_file = self.data.get("highscore_filename")
         if not isinstance(hs_file, str) or not hs_file.strip():
             print(
                 "[CONFIG WARNING] Key 'highscore_filename' missing or invalid, "
                 "using default: 'highscores.json'"
             )
-            self.json_data["highscore_filename"] = "highscores.json"
+            self.data["highscore_filename"] = "highscores.json"
 
-        # levels
-        levels_raw = self.json_data.get("levels")
+        # ====================================================================
+        #                              levels
+        # ====================================================================
+        levels_raw = self.data.get("levels")
         if not isinstance(levels_raw, list):
             print(
                 "[CONFIG WARNING] Key 'levels' is missing or not a list, "
@@ -172,6 +174,7 @@ class MapParser(BaseModel):
 
             validated_levels.append({"width": width, "height": height})
 
+        # Ensure at least 10 levels as required by subject (Chapter VI.7)
         while len(validated_levels) < 10:
             lvl_num = len(validated_levels) + 1
             # Assign size based on the current level
@@ -182,7 +185,7 @@ class MapParser(BaseModel):
             )
             validated_levels.append({"width": size, "height": size})
 
-        self.json_data["levels"] = validated_levels
+        self.data["levels"] = validated_levels
 
 
 if __name__ == "__main__":
@@ -193,10 +196,8 @@ if __name__ == "__main__":
     )
 
     print(f"--- Test parsing di: {config_file} ---")
-    test_parser = MapParser(path=Path(config_file))
+    test_parser = ConfigParser(path=Path(config_file))
 
     print("\nConfigurazione risultante:")
-    for k, v in test_parser.json_data.items():
+    for k, v in test_parser.data.items():
         print(f"  {k}: {v}")
-
-

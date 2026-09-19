@@ -1,5 +1,5 @@
 import sys
-from .map_parser import MapParser
+from .config_parser import ConfigParser
 from mazegenerator import MazeGenerator
 
 # MazeGenerator(
@@ -16,14 +16,15 @@ def main() -> None:
         print("Invalid number of argv")
         return 1
     
-    parser = MapParser(path=argv[1])
-    print(parser.json)
-    maze = MazeGenerator(seed=42)
-    repr(maze)
-    for line in maze._maze:
-        print(line)
+    config_data = ConfigParser(path=argv[1])
+    print(config_data.data)
+    
+    #maze = MazeGenerator(seed=42)
+    #repr(maze)
+    #for line in maze._maze:
+    #    print(line)
 
 
 if __name__ == "__main__":
     main()
-    #help(MazeGenerator)
+    # help(MazeGenerator)
