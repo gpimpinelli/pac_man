@@ -4,10 +4,10 @@ install:
 	uv sync
 	
 run:
-	uv run python -m src.pac_man
+	uv run python -m src.pac_man config.json
 
 debug:
-	uv run python -m pdb -m src.pac_man
+	uv run python -m pdb -m src.pac_man config.json
 
 clean:
 	rm -rf */__pycache__ __pycache__
