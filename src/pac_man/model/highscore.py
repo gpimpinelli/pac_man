@@ -35,7 +35,7 @@ class HighscoreManager:
             )
             self.scores = []
             return
-        
+
         # list[dict] -> [{"name": clean_name, "score": raw_score}]
         loaded_scores = []
         for item in raw_data:
@@ -47,18 +47,18 @@ class HighscoreManager:
             if type(raw_score) is not int or raw_score < 0:
                 continue
             loaded_scores.append({"name": clean_name, "score": raw_score})
-        
+
         loaded_scores.sort(key=lambda item: int(item["score"]), reverse=True)
-        
+
         self.scores = loaded_scores[:10]
-                
+
 
     def _sanitize_name(self, name: object) -> str:
         """Name validation: max 10 char, only alfanumerics and spaces."""
-        
+
         if not isinstance(name, str):
             return "PLAYER"
-        
+
         clean_name = ""
         for char in name:
             if char.isalnum() or char == " ":
@@ -68,14 +68,40 @@ class HighscoreManager:
             return clean_name
         else:
             return "PLAYER"
-            
 
+    def save(self) -> None:
+        """Saves current highscores to the JSON file."""
+        try:
+            with self.filepath.open("w", encoding="utf-8") as f:
+                json.dump(self.scores, f, indent=4)
+        except OSError as e:
+            print(
+                f"[ERROR] Could not save highscores to {self.filepath}: {e}"
+            )
 
-# ============================================================================
-# TODO (Next steps for HighscoreManager):
-# 1. In load(): validate score (int >= 0), sort descending, keep top 10.
-# 2. In _sanitize_name(): filter alnum/spaces, max 10 chars, fallback "PLAYER".
-# 3. Method save(): write self.scores to self.filepath using json.dump().
-# 4. Method is_highscore(score): check if a score qualifies for Top 10.
-# 5. Method add_score(name, score): add new record, sort, keep top 10, save.
-# ============================================================================
+    def is_highscore(self, score: int) -> bool:
+        """Checks if a score qualifies for the top 10 rankings.
+        Args:
+            score (int): The score to evaluate.
+        Returns:
+            bool: True if it qualifies for the top 10, False otherwise.
+        """
+        if not isinstance(score, int) or isinstance(score, bool) or score < 0:
+            return False
+        if len(self.scores) < 10:
+            return True
+        return score > int(self.scores[-1]["score"])
+
+    def add_score(self, name: str, score: int) -> bool:
+        if not self.is_highscore(score):
+            return False
+        clean_name = self._sanitize_name(name)
+        self.scores.append({"name": clean_name, "score": score})
+        self.scores.sort(
+            key=lambda item: item["score"]
+            if isinstance(item["score"], int) else 0,
+            reverse=True
+        )
+        self.scores = self.scores[:10]
+        self.save()
+        return True
