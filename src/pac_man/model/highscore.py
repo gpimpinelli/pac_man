@@ -29,15 +29,46 @@ class HighscoreManager:
             self.scores = []
             return
 
+        if not isinstance(raw_data, list):
+            print(
+                "[WARNING] Highscore data is not a list, resetting standings."
+            )
+            self.scores = []
+            return
+        
+        # list[dict] -> [{"name": clean_name, "score": raw_score}]
+        loaded_scores = []
         for item in raw_data:
+            if not isinstance(item, dict):
+                continue
             raw_name = item.get("name")
             clean_name = self._sanitize_name(raw_name)
-            # TODO: validate score, append to list, sort descending and keep top 10
+            raw_score = item.get("score")
+            if type(raw_score) is not int or raw_score < 0:
+                continue
+            loaded_scores.append({"name": clean_name, "score": raw_score})
+        
+        loaded_scores.sort(key=lambda item: int(item["score"]), reverse=True)
+        
+        self.scores = loaded_scores[:10]
+                
 
     def _sanitize_name(self, name: object) -> str:
         """Name validation: max 10 char, only alfanumerics and spaces."""
-        # TODO (Tomorrow): sanitize name (max 10 chars, alnum and spaces)
-        pass
+        
+        if not isinstance(name, str):
+            return "PLAYER"
+        
+        clean_name = ""
+        for char in name:
+            if char.isalnum() or char == " ":
+                clean_name += char
+        clean_name = clean_name.strip()[:10]
+        if len(clean_name) > 0:
+            return clean_name
+        else:
+            return "PLAYER"
+            
 
 
 # ============================================================================
