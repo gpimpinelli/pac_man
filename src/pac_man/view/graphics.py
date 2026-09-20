@@ -1,4 +1,6 @@
 import os
+import time
+import ctypes
 import mlx
 
 # X11 Keycodes
@@ -31,12 +33,17 @@ def graphic_mlx() -> None:
     img = m.mlx_new_image(mlx_ptr, screen_width, screen_height)
 
     # 5. Get the raw pixel buffer from the image
-    # Returns: (buffer, bits_per_pixel, size_line, endian)
     buffer, bpp, size_line, endian = m.mlx_get_data_addr(img)
+
+    # Calcoliamo la dimensione totale del buffer
+    buffer_size = screen_height * size_line
+    
+    # Creiamo un "Puntatore C" che punta alla stessa memoria del bytearray Python.
+    # Facendolo qui, lo calcoliamo UNA SOLA VOLTA (massime prestazioni).
+    c_buffer = (ctypes.c_char * buffer_size).from_buffer(buffer)
 
     def put_pixel(x: int, y: int, color: int) -> None:
         """Write a single pixel into the image buffer at (x, y)."""
-        # Bounds check: avoid writing outside the image
         if x < 0 or x >= screen_width or y < 0 or y >= screen_height:
             return
         offset = (y * size_line) + (x * (bpp // 8))
@@ -44,6 +51,10 @@ def graphic_mlx() -> None:
         buffer[offset + 1] = (color >> 8) & 0xFF    # Green channel
         buffer[offset + 2] = (color >> 16) & 0xFF   # Red channel
         buffer[offset + 3] = 0xFF                   # Alpha (fully opaque)
+
+    def clear_screen() -> None:
+        """Azzera la memoria video istantaneamente usando il puntatore C."""
+        ctypes.memset(c_buffer, 0, buffer_size)
 
     def draw_line(x0: int, y0: int, x1: int, y1: int, color: int) -> None:
         """Draw a line using Bresenham's algorithm into the image buffer."""
@@ -83,9 +94,7 @@ def graphic_mlx() -> None:
         if keycode in (KEY_ESC, 27, ord('q'), ord('Q')):
             close_game()
 
-    # Hook the window close button ('X'):
-    # - Event 17: DestroyNotify
-    # - Event 33: ClientMessage / WM_DELETE_WINDOW (sent by WSLg window manager)
+    # Hook the window close button
     m.mlx_hook(win_ptr, EVENT_DESTROY, 0, close_game, None)
     m.mlx_hook(win_ptr, EVENT_DESTROY, STRUCTURE_NOTIFY_MASK, close_game, None)
     m.mlx_hook(win_ptr, EVENT_CLIENT_MESSAGE, 0, close_game, None)
@@ -94,24 +103,65 @@ def graphic_mlx() -> None:
     # Hook keyboard events
     m.mlx_key_hook(win_ptr, on_key, None)
 
+    # ========================================================
+    # STATO DELL'ANIMAZIONE
+    # ========================================================
+    anim = {
+        "x": 50.0,
+        "y": 150.0,
+        "size": 40,
+        "vx": 180.0,      
+        "vy": 120.0,      
+        "last_time": time.time(),
+        "color": rgb_to_mlx(255, 255, 0),
+        "target_fps": 60,
+    }
+
     def update_game(data: object) -> int:
-        """Called every frame: draw into buffer then flush to window."""
-        # Clear the screen (black background)
-        draw_rect(0, 0, screen_width, screen_height, 0x000000)
+        current_time = time.time()
+        dt = current_time - anim["last_time"]
+        frame_duration = 1.0 / anim["target_fps"]
 
-        # Draw a red diagonal line from (50, 50) to (350, 350)
-        draw_line(50, 50, 350, 350, rgb_to_mlx(255, 0, 0))
+        # Limita i FPS per evitare di sovraccaricare X11 e causare sfarfallio
+        if dt < frame_duration:
+            time.sleep(0.001)
+            return 0
 
-        # Draw a yellow filled square at (150, 150) of size 50x50
-        draw_rect(150, 150, 50, 50, rgb_to_mlx(255, 255, 0))
+        anim["last_time"] = current_time
 
-        # Flush the entire image buffer to the window in one call
+        # 1. Movimento basato sul Delta Time
+        anim["x"] += anim["vx"] * dt
+        anim["y"] += anim["vy"] * dt
+
+        # 2. Rimbalzi
+        if anim["x"] <= 0:
+            anim["x"] = 0
+            anim["vx"] *= -1
+        elif anim["x"] + anim["size"] >= screen_width:
+            anim["x"] = screen_width - anim["size"]
+            anim["vx"] *= -1
+
+        if anim["y"] <= 0:
+            anim["y"] = 0
+            anim["vy"] *= -1
+        elif anim["y"] + anim["size"] >= screen_height:
+            anim["y"] = screen_height - anim["size"]
+            anim["vy"] *= -1
+
+        # 3. Pulisci il buffer istantaneamente tramite ctypes
+        clear_screen()
+
+        # 4. Disegna l'oggetto nella nuova posizione
+        draw_rect(int(anim["x"]), int(anim["y"]), anim["size"], anim["size"], anim["color"])
+
+        # 5. Flush a video
         m.mlx_put_image_to_window(mlx_ptr, win_ptr, img, 0, 0)
-
-        # Draw text on top (mlx_string_put draws directly on the window)
+        
+        # 6. Disegno del testo (chiamato DOPO il put_image per ridurre il tremolio)
         m.mlx_string_put(mlx_ptr, win_ptr, 10, 10, 0xFFFFFF, "PAC-MAN 42")
         return 0
 
+    # Avvia il loop
     m.mlx_loop_hook(mlx_ptr, update_game, None)
 
     print("Window running. Press ESC, 'q', or click 'X' to exit.")
