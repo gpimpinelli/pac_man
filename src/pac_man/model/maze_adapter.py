@@ -79,7 +79,7 @@ class MazeAdapter(BaseModel):
     """
     width: int = Field(..., gt=0)
     height: int = Field(..., gt=0)
-    seed: int = Field(default=42 gt=0)
+    seed: int = Field(default=42, gt=0)
 
     # Grid of Cell objects: self.grid[y][x]
     grid: list[list[Cell]] = Field(default_factory=list)
