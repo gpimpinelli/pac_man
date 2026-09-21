@@ -1,10 +1,19 @@
+"""
+Pac-Man clone using the MiniLibX (mlx) library.
+
+This module implements a basic Pac-Man style movement engine utilizing
+the Model-View-Controller (MVC) architectural pattern, enhanced with Pydantic.
+"""
+
 import os
 import mlx
 import time
 from enum import Enum, auto
+from typing import Optional
+from pydantic import BaseModel, Field, ConfigDict
 
 # ==========================================
-# COSTANTI E MAPPATURA TASTI
+# CONSTANTS AND KEY MAPPINGS
 # ==========================================
 KEY_ESC = 65307
 
@@ -14,170 +23,264 @@ EVENT_CLIENT_MESSAGE = 33
 KEY_PRESS_MASK = 1 << 0
 STRUCTURE_NOTIFY_MASK = 1 << 17
 
-class Direzione(Enum):
+class Direction(Enum):
+    """Represent the four possible movement directions."""
     UP = auto()
     DOWN = auto()
     LEFT = auto()
     RIGHT = auto()
 
-MAPPA_TASTI = {
-    65362: Direzione.UP,    # Freccia Su
-    119:   Direzione.UP,    # w
-    65364: Direzione.DOWN,  # Freccia Giù
-    115:   Direzione.DOWN,  # s
-    65361: Direzione.LEFT,  # Freccia Sinistra
-    97:    Direzione.LEFT,  # a
-    65363: Direzione.RIGHT, # Freccia Destra
-    100:   Direzione.RIGHT  # d
+KEYS_MAP = {
+    65362: Direction.UP,    # Up Arrow
+    119:   Direction.UP,    # w
+    65364: Direction.DOWN,  # Down Arrow
+    115:   Direction.DOWN,  # s
+    65361: Direction.LEFT,  # Left Arrow
+    97:    Direction.LEFT,  # a
+    65363: Direction.RIGHT, # Right Arrow
+    100:   Direction.RIGHT  # d
 }
 
 def rgb_to_mlx(r: int, g: int, b: int) -> int:
-    """Convert RGB (0-255) values to a 24-bit MLX integer color."""
+    """Convert RGB (0-255) color channels to a 24-bit MLX integer color."""
     return (r << 16) | (g << 8) | b
 
+
 # ==========================================
-# FUNZIONE PRINCIPALE (MOTORE + GIOCO)
+# CONFIGURATION
 # ==========================================
-def graphic_mlx() -> None:
-    # 1. Inizializza MLX e Finestra
-    m = mlx.Mlx()
-    mlx_ptr = m.mlx_init()
-    screen_width, screen_height = 1024, 764
-    win_ptr = m.mlx_new_window(mlx_ptr, screen_width, screen_height, "Pac-Man 42")
+class GameConfig(BaseModel):
+    """Centralized, validated configuration for the game."""
+    width: int = Field(default=1024, gt=0, description="Window width in pixels.")
+    height: int = Field(default=764, gt=0, description="Window height in pixels.")
+    title: str = Field(default="Pac-Man 42", min_length=1, description="Window title.")
+    target_fps: int = Field(default=60, gt=0, le=240, description="Target frames per second.")
 
-    # 2. Inizializza l'Immagine e il Buffer per il rendering super-veloce
-    img = m.mlx_new_image(mlx_ptr, screen_width, screen_height)
-    data, bpp, size_line, _ = m.mlx_get_data_addr(img)
-    bytes_per_pixel = bpp // 8
-    buffer_size = screen_height * size_line
 
-    # 3. Prepara il colore di sfondo (Blu notte: 0x050522) in byte per cancellazione rapida
-    # In memoria i canali sono B, G, R, A (quindi 0x22, 0x05, 0x05, 0xFF)
-    bg_bytes = bytes([0x22, 0x05, 0x05, 0xFF])
-    _bg_buffer = bg_bytes * (buffer_size // bytes_per_pixel)
+# ==========================================
+# 1. MODEL (Physics, Data, and Rules)
+# ==========================================
+class GameModel(BaseModel):
+    """
+    Manage the game logic, state, and entity physics.
+    Inherits from Pydantic's BaseModel for rigid data initialization.
+    """
+    # Environment constraints
+    screen_width: int = Field(..., gt=0)
+    screen_height: int = Field(..., gt=0)
+    
+    # Player state & constraints
+    x: float = Field(default=50.0, ge=0.0, description="Player X coordinate.")
+    y: float = Field(default=150.0, ge=0.0, description="Player Y coordinate.")
+    size: int = Field(default=40, gt=0, description="Player width/height in pixels.")
+    speed: float = Field(default=180.0, gt=0.0, description="Movement speed (pixels/sec).")
+    
+    # default_factory is used if a function call is needed, 
+    # but here a static call is fine since it evaluates to a simple int.
+    color: int = Field(default=rgb_to_mlx(255, 255, 0))
+    
+    last_key: Optional[Direction] = Field(default=None)
+    started: bool = Field(default=False)
 
-    # --- FUNZIONI GRAFICHE OTTIMIZZATE ---
-    def clear_buffer() -> None:
-        """Svuota lo schermo applicando il colore di sfondo in un solo colpo (velocissimo)."""
-        data[0:buffer_size] = _bg_buffer
+    # Disable assignment validation for performance during the 60fps loop
+    model_config = ConfigDict(validate_assignment=False)
 
-    def draw_rect_fast(x: int, y: int, w: int, h: int, color: int) -> None:
-        """Disegna il quadrato manipolando direttamente i byte (niente loop lenti in Python)."""
+    def update(self, dt: float):
+        """
+        Update the player position and handle collisions.
+
+        Args:
+            dt: Delta time elapsed since the last frame, in seconds.
+        """
+        if not self.started:
+            return
+
+        # 1. Movement logic
+        match self.last_key:
+            case Direction.UP:
+                self.y -= self.speed * dt
+            case Direction.DOWN:
+                self.y += self.speed * dt
+            case Direction.LEFT:
+                self.x -= self.speed * dt
+            case Direction.RIGHT:
+                self.x += self.speed * dt
+
+        # 2. Collision logic (stops at the edge but allows wall-sliding)
+        if self.x <= 0:
+            self.x = 0.0
+            if self.last_key == Direction.LEFT:
+                self.last_key = None
+                
+        elif self.x + self.size >= self.screen_width:
+            self.x = float(self.screen_width - self.size)
+            if self.last_key == Direction.RIGHT:
+                self.last_key = None
+
+        if self.y <= 0:
+            self.y = 0.0
+            if self.last_key == Direction.UP:
+                self.last_key = None
+                
+        elif self.y + self.size >= self.screen_height:
+            self.y = float(self.screen_height - self.size)
+            if self.last_key == Direction.DOWN:
+                self.last_key = None
+
+
+# ==========================================
+# 2. VIEW (Graphics Engine and Rendering)
+# ==========================================
+class GameView:
+    """Handle window creation, rendering, and MLX graphical outputs."""
+
+    def __init__(self, config: GameConfig):
+        """Initialize the MLX graphical environment using validated config."""
+        self.config = config
+        
+        self.m = mlx.Mlx()
+        
+        # mlx_init: Establish a connection to the X-Server
+        self.mlx_ptr = self.m.mlx_init()
+        
+        # mlx_new_window: Create a new window on the screen
+        self.win_ptr = self.m.mlx_new_window(self.mlx_ptr, self.config.width, self.config.height, self.config.title)
+        
+        # mlx_new_image: Create an off-screen image buffer in memory
+        self.img = self.m.mlx_new_image(self.mlx_ptr, self.config.width, self.config.height)
+        
+        # mlx_get_data_addr: Retrieve the memory address of the image
+        self.data, self.bpp, self.size_line, _ = self.m.mlx_get_data_addr(self.img)
+        
+        self.bytes_per_pixel = self.bpp // 8
+        self.buffer_size = self.config.height * self.size_line
+        
+        # Background buffer cache (Night Blue)
+        bg_bytes = bytes([0x22, 0x05, 0x05, 0xFF])
+        self._bg_buffer = bg_bytes * (self.buffer_size // self.bytes_per_pixel)
+
+    def clear(self):
+        """Wipe the screen buffer instantly using a pre-calculated byte array."""
+        self.data[0:self.buffer_size] = self._bg_buffer
+
+    def draw_rect_fast(self, x: int, y: int, w: int, h: int, color: int):
+        """
+        Draw a solid rectangle in the image buffer using direct byte manipulation.
+        """
         b_ch = color & 0xFF
         g_ch = (color >> 8) & 0xFF
         r_ch = (color >> 16) & 0xFF
 
         x0, y0 = max(0, x), max(0, y)
-        x1, y1 = min(x + w, screen_width), min(y + h, screen_height)
+        x1, y1 = min(x + w, self.config.width), min(y + h, self.config.height)
         actual_w = x1 - x0
         
         if actual_w <= 0 or y1 <= y0:
             return
 
         row_bytes = bytes([b_ch, g_ch, r_ch, 0xFF] * actual_w)
-        row_len = actual_w * bytes_per_pixel
+        row_len = actual_w * self.bytes_per_pixel
 
         for row in range(y0, y1):
-            start = row * size_line + x0 * bytes_per_pixel
-            data[start: start + row_len] = row_bytes
+            start = row * self.size_line + x0 * self.bytes_per_pixel
+            self.data[start: start + row_len] = row_bytes
 
-    # --- FUNZIONI DI GIOCO ---
-    def close_game(*args: object) -> None:
+    def render(self, model: GameModel):
+        """
+        Extract data from the Model and render it to the window.
+        """
+        # mlx_sync: Force X11 to finish reading the image buffer before we overwrite it
+        self.m.mlx_sync(self.mlx_ptr, mlx.Mlx.SYNC_IMAGE_WRITABLE, self.img)
+        
+        self.clear()
+        self.draw_rect_fast(int(model.x), int(model.y), model.size, model.size, model.color)
+        
+        # mlx_put_image_to_window: Dump the completed off-screen image buffer onto the active window
+        self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.img, 0, 0)
+
+
+# ==========================================
+# 3. CONTROLLER (Input, Loop, and Integration)
+# ==========================================
+class GameController:
+    """Orchestrate the game loop, user inputs, and component integration."""
+
+    def __init__(self):
+        """Initialize the Controller using Pydantic configurations."""
+        self.config = GameConfig(width=1024, height=764, target_fps=60)
+        self.last_time = time.perf_counter()
+        
+        # Instantiate Model dynamically from config parameters
+        self.model = GameModel(
+            screen_width=self.config.width,
+            screen_height=self.config.height
+        )
+        
+        # Pass the config block to the View
+        self.view = GameView(self.config)
+        
+        self.setup_hooks()
+
+    def setup_hooks(self):
+        """Register MLX event listeners to Controller methods."""
+        m = self.view.m
+        win = self.view.win_ptr
+        
+        # mlx_hook: Bind X11 events
+        m.mlx_hook(win, EVENT_DESTROY, 0, self.close_game, None)
+        m.mlx_hook(win, EVENT_DESTROY, STRUCTURE_NOTIFY_MASK, self.close_game, None)
+        m.mlx_hook(win, EVENT_CLIENT_MESSAGE, 0, self.close_game, None)
+        m.mlx_hook(win, EVENT_CLIENT_MESSAGE, STRUCTURE_NOTIFY_MASK, self.close_game, None)
+        
+        # mlx_hook: Bind keyboard press events
+        m.mlx_hook(win, EVENT_KEY_PRESS, KEY_PRESS_MASK, self.on_key_press, None)
+        
+        # mlx_loop_hook: Main function for MLX infinite loop
+        m.mlx_loop_hook(self.view.mlx_ptr, self.update_game, None)
+
+    def close_game(self, *args):
+        """Handle game shutdown and memory cleanup."""
         print("Closing game...")
-        m.mlx_destroy_window(mlx_ptr, win_ptr)
+        self.view.m.mlx_destroy_window(self.view.mlx_ptr, self.view.win_ptr)
         os._exit(0)
 
-    def on_key_press(keycode: int, *args: object) -> int:
+    def on_key_press(self, keycode: int, *args):
+        """Process keyboard input and update the model state."""
         if keycode in (KEY_ESC, 27, ord('q'), ord('Q')):
-            close_game()
+            self.close_game()
             
-        action = MAPPA_TASTI.get(keycode)
+        action = KEYS_MAP.get(keycode)
         if action:
-            anim["last_key"] = action
-            if not anim["started"]:
-                anim["started"] = True
-                anim["last_time"] = time.perf_counter() # Usa il timer ad alta precisione
+            self.model.last_key = action
+            if not self.model.started:
+                self.model.started = True
+                self.last_time = time.perf_counter()
         return 0
 
-    # STATO DELL'ANIMAZIONE
-    anim = {
-        "x": 50.0,
-        "y": 150.0,
-        "size": 40,
-        "speed": 180.0,
-        "last_key": None,
-        "started": False,
-        "last_time": time.perf_counter(),
-        "color": rgb_to_mlx(255, 255, 0),
-        "target_fps": 60,
-    }
-    
-    def update_game(data_param: object) -> int:
+    def update_game(self, *args):
+        """Manage the frame rate, trigger physics updates, and execute rendering."""
         current_time = time.perf_counter()
-        dt = current_time - anim["last_time"]
-        frame_duration = 1.0 / anim["target_fps"]
+        dt = current_time - self.last_time
+        frame_duration = 1.0 / self.config.target_fps
 
-        # Se il frame non è pronto, esce SUBITO senza bloccare X11 (niente sleep!)
         if dt < frame_duration:
             return 0
 
-        anim["last_time"] = current_time
+        self.last_time = current_time
 
-        # 1. Aggiorna Posizione
-        if anim["started"]:
-            match anim["last_key"]:
-                case Direzione.UP:
-                    anim["y"] -= anim["speed"] * dt
-                case Direzione.DOWN:
-                    anim["y"] += anim["speed"] * dt
-                case Direzione.LEFT:
-                    anim["x"] -= anim["speed"] * dt
-                case Direzione.RIGHT:
-                    anim["x"] += anim["speed"] * dt
-
-# 2. Collisioni (si ferma al bordo, ma permette di scivolare)
-        if anim["x"] <= 0:
-            anim["x"] = 0.0
-            if anim["last_key"] == Direzione.LEFT:    # Si ferma solo se sta andando a SINISTRA
-                anim["last_key"] = None
-                
-        elif anim["x"] + anim["size"] >= screen_width:
-            anim["x"] = float(screen_width - anim["size"])
-            if anim["last_key"] == Direzione.RIGHT:   # Si ferma solo se sta andando a DESTRA
-                anim["last_key"] = None
-
-        if anim["y"] <= 0:
-            anim["y"] = 0.0
-            if anim["last_key"] == Direzione.UP:      # Si ferma solo se sta andando in ALTO
-                anim["last_key"] = None
-                
-        elif anim["y"] + anim["size"] >= screen_height:
-            anim["y"] = float(screen_height - anim["size"])
-            if anim["last_key"] == Direzione.DOWN:    # Si ferma solo se sta andando in BASSO
-                anim["last_key"] = None
-
-        # 3. Sincronizza per evitare sfarfallii e strappi a schermo
-        m.mlx_sync(mlx_ptr, mlx.Mlx.SYNC_IMAGE_WRITABLE, img)
+        self.model.update(dt)
+        self.view.render(self.model)
         
-        # 4. Disegna
-        clear_buffer()
-        draw_rect_fast(int(anim["x"]), int(anim["y"]), anim["size"], anim["size"], anim["color"])
-        
-        # 5. Invia alla finestra
-        m.mlx_put_image_to_window(mlx_ptr, win_ptr, img, 0, 0)
         return 0
 
-    # --- REGISTRAZIONE HOOK ---
-    m.mlx_hook(win_ptr, EVENT_DESTROY, 0, close_game, None)
-    m.mlx_hook(win_ptr, EVENT_DESTROY, STRUCTURE_NOTIFY_MASK, close_game, None)
-    m.mlx_hook(win_ptr, EVENT_CLIENT_MESSAGE, 0, close_game, None)
-    m.mlx_hook(win_ptr, EVENT_CLIENT_MESSAGE, STRUCTURE_NOTIFY_MASK, close_game, None)
-    
-    m.mlx_hook(win_ptr, EVENT_KEY_PRESS, KEY_PRESS_MASK, on_key_press, None)
-    m.mlx_loop_hook(mlx_ptr, update_game, None)
+    def run(self):
+        """Launch the game engine and start the event loop."""
+        print(f"{self.config.title} Engine Running. Premi frecce o WASD per muoverti. ESC per uscire.")
+        self.view.m.mlx_loop(self.view.mlx_ptr)
 
-    print("Pac-Man Engine Running. Premi frecce o WASD per muoverti. ESC per uscire.")
-    m.mlx_loop(mlx_ptr)
-
+# ==========================================
+# EXECUTION
+# ==========================================
 if __name__ == "__main__":
-    graphic_mlx()
+    game = GameController()
+    game.run()
