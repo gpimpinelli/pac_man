@@ -10,10 +10,10 @@ from enum import IntFlag, auto
 
 class Direction(IntFlag):
     NONE  = 0
-    WEST = auto()   # 1
-    SOUTH = auto()  # 2
-    EAST  = auto()  # 4
-    NORTH = auto()  # 8
+    NORTH = auto()  # 1
+    EAST  = auto()  # 2
+    SOUTH = auto()  # 4
+    WEST = auto()   # 8
 
     ALL_WALLS =  WEST | SOUTH | EAST | NORTH # 15
 

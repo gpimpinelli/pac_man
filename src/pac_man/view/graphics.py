@@ -212,7 +212,7 @@ class GameController:
     def __init__(self):
         """Initialize the Controller using Pydantic configurations."""
         
-        self.config = GameConfig(width=1024, height=764, target_fps=60)
+        self.config = GameConfig(width=1480, height=1024, target_fps=60)
         self.last_time = time.perf_counter()
         
         # Instantiate Model dynamically from config parameters
@@ -223,7 +223,7 @@ class GameController:
 
         # Pass the config block to the View
         self.view = GameView(self.config)
-        self.maze = MazeAdapter()
+        self.maze = MazeAdapter(seed=900)
         self.renderer = Renderer(self.view, self.maze)
 
         spawn_x, spawn_y = self.renderer.cell_to_pixel(

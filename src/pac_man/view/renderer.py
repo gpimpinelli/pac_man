@@ -53,17 +53,17 @@ class Renderer:
                 cx, cy = self.cell_to_pixel(cell.x, cell.y)
                 
                 if cell.is_solid:
-                    self.view.draw_rect_fast(
+                    draw_rect(
                         cx, cy, tile_size, tile_size, COLOR_WALL
                     )
                     continue
 
                 if cell.has_wall_north:
-                    self.view.draw_rect_fast(
+                    draw_rect(
                         cx, cy, tile_size, wall_thick, COLOR_WALL
                     )
                 if cell.has_wall_south:
-                    self.view.draw_rect_fast(
+                    draw_rect(
                         cx,
                         cy + tile_size - wall_thick,
                         tile_size,
@@ -71,11 +71,11 @@ class Renderer:
                         COLOR_WALL
                     )
                 if cell.has_wall_west:
-                    self.view.draw_rect_fast(
+                    draw_rect(
                         cx, cy, wall_thick, tile_size, COLOR_WALL
                     )
                 if cell.has_wall_east:
-                    self.view.draw_rect_fast(
+                    draw_rect(
                         cx + tile_size - wall_thick,
                         cy,
                         wall_thick,
@@ -88,7 +88,7 @@ class Renderer:
                     size = max(4, tile_size // 8)
                     px = cx + (tile_size - size) // 2
                     py = cy + (tile_size - size) // 2
-                    self.view.draw_rect_fast(px,py, size, size, COLOR_PACGUM)
+                    draw_rect(px,py, size, size, COLOR_PACGUM)
                 
     
                 
