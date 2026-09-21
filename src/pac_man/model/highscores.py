@@ -1,23 +1,19 @@
-import json
 from pathlib import Path
-from typing import Self
-from pydantic import BaseModel, Field, model_validator
+import json
 
 
-class HighscoreManager(BaseModel):
-    """
-    It manages the persistency and validation of the record's ranking
-    Initialization of the record's manager and existent scores loader
-    Args:
-        filepath (str | Path): Path to the scores JSON file.
-    """
-    filepath: Path = Field(default=Path("highscore.json"))
-    scores: list[dict[str, object]] = Field(default_factory=list)
+class HighscoreManager:
+    """It manages the persistency and validation of the record's ranking"""
 
-    @model_validator(model='after')
-    def init_and_load(self) -> Self:
+    def __init__(self, filepath: str | Path = "highscores.json") -> None:
+        """
+        Initialization of the record's manager and existent scores loader
+        Args:
+            filepath (str | Path): Path to the scores JSON file.
+        """
+        self.filepath: Path = Path(filepath)
+        self.scores: list[dict[str, object]] = []
         self.load()
-        return self
 
     def load(self) -> None:
         if not self.filepath.is_file():
@@ -109,13 +105,3 @@ class HighscoreManager(BaseModel):
         self.scores = self.scores[:10]
         self.save()
         return True
-
-
-# ============================================================================
-# TODO (Next steps for HighscoreManager):
-# 1. In load(): validate score (int >= 0), sort descending, keep top 10.
-# 2. In _sanitize_name(): filter alnum/spaces, max 10 chars, fallback "PLAYER".
-# 3. Method save(): write self.scores to self.filepath using json.dump().
-# 4. Method is_highscore(score): check if a score qualifies for Top 10.
-# 5. Method add_score(name, score): add new record, sort, keep top 10, save.
-# ============================================================================

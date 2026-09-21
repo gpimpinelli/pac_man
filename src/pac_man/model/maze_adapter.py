@@ -4,10 +4,9 @@ Transforms the external bitmask maze into a Pac-Man compatible grid
 with Cell objects, pellets, power pellets, and entity spawn points.
 """
 
-from pydantic import BaseModel, Field, model_validator
 from mazegenerator import MazeGenerator
+from dataclasses import dataclass
 from enum import IntFlag, auto
-from typing import Self
 
 class Direction(IntFlag):
     NONE  = 0
@@ -19,7 +18,8 @@ class Direction(IntFlag):
     ALL_WALLS =  WEST | SOUTH | EAST | NORTH # 15
 
 
-class Cell(BaseModel):
+@dataclass(slots=True)
+class Cell:
     """
     Represents a single cell in the Pac-Man maze grid.
     Initializes a cell at grid coordinates (x, y).
@@ -30,9 +30,9 @@ class Cell(BaseModel):
         wall_code (int): 4-bit wall mask from MazeGenerator.
     """
 
-    x: int = Field(default=1, ge=0)
-    y: int = Field(default=1, ge=0)
-    wall_code: Direction = Field(default=Direction.NONE)
+    x: int
+    y: int
+    wall_code: Direction = Direction.NONE
 
     # Gameplay attributes
     has_pacgum: bool = False
@@ -67,34 +67,34 @@ class Cell(BaseModel):
         return (self.wall_code & Direction.ALL_WALLS) == Direction.ALL_WALLS
 
 
-class MazeAdapter(BaseModel):
-    """
-    Adapts external MazeGenerator to the Pac-Man game domain
-    Initializes the adapter and generates the maze grid.
+class MazeAdapter:
+    """Adapts external MazeGenerator to the Pac-Man game domain."""
 
-    Args:
-        width (int): Number of horizontal cells.
-        height (int): Number of vertical cells.
-        seed (int): Seed for maze reproducibility (0 = random).
-    """
-    width: int = Field(..., gt=0)
-    height: int = Field(..., gt=0)
-    seed: int = Field(default=42, gt=0)
+    def __init__(
+        self, width: int = 15, height: int = 15, seed: int = 42
+    ) -> None:
+        """Initializes the adapter and generates the maze grid.
 
-    # Grid of Cell objects: self.grid[y][x]
-    grid: list[list[Cell]] = Field(default_factory=list)
+        Args:
+            width (int): Number of horizontal cells.
+            height (int): Number of vertical cells.
+            seed (int): Seed for maze reproducibility (0 = random).
+        """
+        self.width: int = width
+        self.height: int = height
+        self.seed: int = seed
 
-    # Entity spawn coordinates (x, y)
-    player_spawn: tuple[int, int] = (0, 0)
-    ghost_spawns: list[tuple[int, int]] = Field(default_factory=list)
+        # Grid of Cell objects: self.grid[y][x]
+        self.grid: list[list[Cell]] = []
 
-    # Total number of pellets left to eat for winning the level
-    total_pacgums: int = 0
-    
-    @model_validator(mode='after')
-    def init_and_generate_maze(self) -> Self:
+        # Entity spawn coordinates (x, y)
+        self.player_spawn: tuple[int, int] = (0, 0)
+        self.ghost_spawns: list[tuple[int, int]] = []
+
+        # Total number of pellets left to eat for winning the level
+        self.total_pacgums: int = 0
+
         self.generate()
-        return self
 
     def generate(self) -> None:
         """Generates and populates the Pac-Man maze using MazeGenerator."""

@@ -9,6 +9,8 @@ import os
 import mlx
 import time
 from enum import Enum, auto
+from ..model import MazeAdapter
+from .renderer import Renderer
 from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -150,9 +152,9 @@ class GameView:
         self.img = self.m.mlx_new_image(self.mlx_ptr, self.config.width, self.config.height)
         
         # mlx_get_data_addr: Retrieve the memory address of the image
-        self.data, self.bpp, self.size_line, _ = self.m.mlx_get_data_addr(self.img)
+        self.data, self.bfp, self.size_line, _ = self.m.mlx_get_data_addr(self.img)
         
-        self.bytes_per_pixel = self.bpp // 8
+        self.bytes_per_pixel = self.bfp // 8
         self.buffer_size = self.config.height * self.size_line
         
         # Background buffer cache (Night Blue)
@@ -185,14 +187,16 @@ class GameView:
             start = row * self.size_line + x0 * self.bytes_per_pixel
             self.data[start: start + row_len] = row_bytes
 
-    def render(self, model: GameModel):
+    def render(self, model: GameModel, renderer: Renderer):
         """
         Extract data from the Model and render it to the window.
         """
         # mlx_sync: Force X11 to finish reading the image buffer before we overwrite it
         self.m.mlx_sync(self.mlx_ptr, mlx.Mlx.SYNC_IMAGE_WRITABLE, self.img)
-        
         self.clear()
+        
+        renderer.draw_maze(renderer.maze)
+        
         self.draw_rect_fast(int(model.x), int(model.y), model.size, model.size, model.color)
         
         # mlx_put_image_to_window: Dump the completed off-screen image buffer onto the active window
@@ -207,6 +211,7 @@ class GameController:
 
     def __init__(self):
         """Initialize the Controller using Pydantic configurations."""
+        
         self.config = GameConfig(width=1024, height=764, target_fps=60)
         self.last_time = time.perf_counter()
         
@@ -215,12 +220,21 @@ class GameController:
             screen_width=self.config.width,
             screen_height=self.config.height
         )
-        
+
         # Pass the config block to the View
         self.view = GameView(self.config)
+        self.maze = MazeAdapter()
+        self.renderer = Renderer(self.view, self.maze)
+
+        spawn_x, spawn_y = self.renderer.cell_to_pixel(
+            self.maze.player_spawn[0], self.maze.player_spawn[1]
+        )
+        self.model.x = float(spawn_x)
+        self.model.y = float(spawn_y)
+        self.model.size = int(self.renderer.tile_size * 0.7)
         
         self.setup_hooks()
-
+        
     def setup_hooks(self):
         """Register MLX event listeners to Controller methods."""
         m = self.view.m
@@ -262,6 +276,7 @@ class GameController:
         current_time = time.perf_counter()
         dt = current_time - self.last_time
         frame_duration = 1.0 / self.config.target_fps
+        self.view.render(self.model, self.renderer)
 
         if dt < frame_duration:
             return 0
@@ -269,7 +284,6 @@ class GameController:
         self.last_time = current_time
 
         self.model.update(dt)
-        self.view.render(self.model)
         
         return 0
 
