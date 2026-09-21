@@ -4,9 +4,10 @@ Transforms the external bitmask maze into a Pac-Man compatible grid
 with Cell objects, pellets, power pellets, and entity spawn points.
 """
 
-from enum import IntFlag, auto
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field, model_validator
 from mazegenerator import MazeGenerator
+from enum import IntFlag, auto
+from typing import Self
 
 class Direction(IntFlag):
     NONE  = 0
@@ -29,7 +30,6 @@ class Cell(BaseModel):
         wall_code (int): 4-bit wall mask from MazeGenerator.
     """
 
-    model_config = ConfigDict(frozen=True)
     x: int = Field(default=1, ge=0)
     y: int = Field(default=1, ge=0)
     wall_code: Direction = Field(default=Direction.NONE)
@@ -39,7 +39,7 @@ class Cell(BaseModel):
     has_super_pacgum: bool = False
 
     def has_wall(self, direction: Direction) -> bool:
-        return bool(self._wall_cod & direction)
+        return bool(self.wall_code & direction)
 
     @property
     def has_wall_north(self) -> bool:
@@ -64,7 +64,7 @@ class Cell(BaseModel):
     @property
     def is_solid(self) -> bool:
         """Returns True if this cell is an obstacle (e.g. 42 logo)."""
-        return (self.wall_code & Direction.ALL_WALLS) == Direction.ALL_WALLSK
+        return (self.wall_code & Direction.ALL_WALLS) == Direction.ALL_WALLS
 
 
 class MazeAdapter(BaseModel):
@@ -91,63 +91,105 @@ class MazeAdapter(BaseModel):
     # Total number of pellets left to eat for winning the level
     total_pacgums: int = 0
     
-    @model_validator('after')
+    @model_validator(mode='after')
     def init_and_generate_maze(self) -> Self:
         self.generate()
         return self
 
     def generate(self) -> None:
         """Generates and populates the Pac-Man maze using MazeGenerator."""
-        # ====================================================================
-        # TODO 1: Safe MazeGenerator Instantiation
-        # - Wrap MazeGenerator(size=(self.width, self.height),
-        #   perfect=False, seed=self.seed) in a try/except block.
-        # - If an exception occurs, print an error and handle gracefully
-        #   (Subject V.4 requirement: no crash!).
-        # ====================================================================
+        try:
+            generator = MazeGenerator(
+                size=(self.width, self.height),
+                perfect=False,
+                seed=self.seed,
+            )
+            # MazeGenerator init a 2D mtrx of int in ._maze
+            raw_maze = generator._maze
+        except Exception as e:
+            print(f"[MAZE ERROR] Failed to generate maze: {e}")
+            # Fallback -> if mazegenerator does not work
+            raw_maze = [
+                [0 for _ in range(self.width)] for _ in range(self.height)
+            ]
 
-        # ====================================================================
-        # TODO 2: Populate self.grid with Cell objects
-        # - Loop over y in range(self.height) and x in range(self.width).
-        # - Read the wall_code from raw_maze[y][x].
-        # - Create Cell(x, y, wall_code) and append to self.grid.
-        # ====================================================================
+        self.grid = []
+        for y in range(self.height):
+            row: list[Cell] = []
+            for x in range(self.width):
+                raw_code = raw_maze[y][x]
+                # & AND bitwise operator: return 1 if both are 1
+                # comparing raw_code(binary value) with ALL_WALL.value(1111)
+                wall_code = Direction(raw_code & Direction.ALL_WALLS.value)
+                cell = Cell(x=x, y=y, wall_code=wall_code)
+                row.append(cell)
+            self.grid.append(row)
 
-        # ====================================================================
-        # TODO 3: Define Spawns (Subject Chapter VI.1)
-        # - Pac-Man starts in the middle:
-        #   self.player_spawn = (self.width // 2, self.height // 2)
-        # - 4 Ghosts start in the 4 corners:
-        #   (0, 0), (self.width - 1, 0),
-        #   (0, self.height - 1), (self.width - 1, self.height - 1)
-        # ====================================================================
+        # Positions are (x=0, y=0) -> (width, height)
+        self.player_spawn = (self.width // 2, self.height // 2)
+        self.ghost_spawns = [
+            (0, 0),
+            (self.width - 1, 0),
+            (0, self.height - 1),
+            (self.width - 1, self.height - 1)
+        ]
 
-        # ====================================================================
-        # TODO 4: Place Pacgums & Super-Pacgums (Subject Chapter VI.1)
-        # - Place Super-Pacgums in the 4 corners:
-        #   cell.has_super_pacgum = True
-        # - Place normal Pacgums in corridor cells:
-        #   - Skip solid cells (cell.is_solid)
-        #   - Skip the player spawn point
-        #   - Skip the 4 ghost corner spawns (they have Super-Pacgums!)
-        # - Count and update self.total_pacgums with the number of pellets.
-        # ====================================================================
-        pass
+        self.total_pacgums = 0
+        for row in self.grid:
+            for cell in row:
+                pos = (cell.x, cell.y)
+
+                # Pass solid cell and player spawn
+                if cell.is_solid or pos == self.player_spawn:
+                    continue
+                # Super pacgum if cell is a ghost spawn
+                if pos in self.ghost_spawns:
+                    cell.has_super_pacgum = True
+                    self.total_pacgums += 1
+                else:
+                    cell.has_pacgum = True
+                    self.total_pacgums += 1
 
     def get_cell(self, x: int, y: int) -> Cell | None:
         """Returns the Cell at (x, y), or None if out of bounds.
-
         Args:
             x (int): Horizontal cell coordinate.
             y (int): Vertical cell coordinate.
-
         Returns:
             Cell | None: The cell at (x, y) or None.
         """
-        # ====================================================================
-        # TODO 5: Out of bounds check
-        # - If 0 <= x < self.width and 0 <= y < self.height:
-        #       return self.grid[y][x]
-        # - Otherwise return None.
-        # ====================================================================
-        pass
+        if 0 <= x < self.width and 0 <= y < self.height:
+            return self.grid[y][x]
+        return None
+
+
+if __name__ == "__main__":
+    adapter = MazeAdapter(width=15, height=15, seed=42)
+    print("=== TEST MAZE ADAPTER ===")
+    print(f"Dimensioni labirinto: {adapter.width}x{adapter.height}")
+    print(f"Player spawn (Centro): {adapter.player_spawn}")
+    print(f"Ghost spawns (4 angoli): {adapter.ghost_spawns}")
+    print(f"Totale pacgum da mangiare: {adapter.total_pacgums}")
+
+    # Visualizzazione ASCII del labirinto
+    print("\n--- Anteprima Griglia (P=Pacman, G=Ghost/SuperPacgum, .=Pacgum, #=Muro solido) ---")
+    for y in range(adapter.height):
+        line = ""
+        for x in range(adapter.width):
+            c = adapter.get_cell(x, y)
+            if c is None:
+                line += " "
+            elif (x, y) == adapter.player_spawn:
+                line += "P "
+            elif (x, y) in adapter.ghost_spawns:
+                line += "G "
+            elif c.is_solid:
+                line += "# "
+            elif c.has_super_pacgum:
+                line += "O "
+            elif c.has_pacgum:
+                line += ". "
+            else:
+                line += "  "
+        print(line)
+
