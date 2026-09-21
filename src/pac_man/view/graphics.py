@@ -5,11 +5,40 @@ import time
 # X11 Keycodes
 KEY_ESC = 65307  # Escape key on Linux/X11
 
-# X11 Event IDs and Masks
-EVENT_DESTROY = 17          # DestroyNotify event
-EVENT_CLIENT_MESSAGE = 33   # ClientMessage event (WM_DELETE_WINDOW from window manager)
+# --- EVENTI TASTIERA ---
+EVENT_KEY_PRESS = 2         # Tasto premuto
+EVENT_KEY_RELEASE = 3       # Tasto rilasciato
+KEY_PRESS_MASK = 1 << 0     # Filtro per i tasti premuti
+KEY_RELEASE_MASK = 1 << 1   # Filtro per i tasti rilasciati
+
+# --- EVENTI FINESTRA (I tuoi originali) ---
+EVENT_DESTROY = 17          # Finestra distrutta (clic sulla X)
+EVENT_CLIENT_MESSAGE = 33   # Messaggio di chiusura dal sistema operativo
 STRUCTURE_NOTIFY_MASK = 1 << 17
 
+from enum import Enum, auto
+
+class Direzione(Enum):
+    UP = auto()
+    DOWN = auto()
+    LEFT = auto()
+    RIGHT = auto()
+
+MAPPA_TASTI = {
+    65362: Direzione.UP,       # Freccia Su
+    119:   Direzione.UP,       # w
+    
+    65364: Direzione.DOWN,      # Freccia Giù
+    115:   Direzione.DOWN,      # s
+    
+    65361: Direzione.LEFT, # Freccia Sinistra
+    97:    Direzione.LEFT, # a
+    
+    65363: Direzione.RIGHT,   # Freccia Destra
+    100:   Direzione.RIGHT    # d
+}
+
+# ---------------------------------------------------------------------------------
 
 
 
@@ -81,21 +110,23 @@ def graphic_mlx() -> None:
         os._exit(0)
 
     # 7. Keyboard callback
-    def on_key(keycode: int, *args: object) -> None:
+    def on_key_press(keycode: int, *args: object) -> int:
+        # Opzionale: per fare debug e vedere il codice nella console
         print(f"Key pressed: {keycode}")
+        
+        # 1. Controlla prima i tasti di uscita
         if keycode in (KEY_ESC, 27, ord('q'), ord('Q')):
             close_game()
+            
+        # 2. Se non è uscito, controlla se è un tasto di movimento
+        action = MAPPA_TASTI.get(keycode)
+        if action:
+            anim["direction"] = action  # Cambia direzione
+            anim["started"] = True      # Sblocca il gioco
+            anim["last_time"] = time.time()
+        return 0
 
-    # Hook the window close button ('X'):
-    # - Event 17: DestroyNotify
-    # - Event 33: ClientMessage / WM_DELETE_WINDOW (sent by WSLg window manager)
-    m.mlx_hook(win_ptr, EVENT_DESTROY, 0, close_game, None)
-    m.mlx_hook(win_ptr, EVENT_DESTROY, STRUCTURE_NOTIFY_MASK, close_game, None)
-    m.mlx_hook(win_ptr, EVENT_CLIENT_MESSAGE, 0, close_game, None)
-    m.mlx_hook(win_ptr, EVENT_CLIENT_MESSAGE, STRUCTURE_NOTIFY_MASK, close_game, None)
 
-    # Hook keyboard events
-    m.mlx_key_hook(win_ptr, on_key, None)
     # ========================================================
     # QUI DEFINISCI LO STATO DELL'ANIMAZIONE (prima di update_game)
     # ========================================================
@@ -103,15 +134,18 @@ def graphic_mlx() -> None:
         "x": 50.0,
         "y": 150.0,
         "size": 40,
-        "vx": 180.0,      # velocità orizzontale (pixel/secondo)
-        "vy": 120.0,      # velocità verticale (pixel/secondo)
+        "speed": 100.0,
+        "last_key" : None,
+        "started": False,
         "last_time": time.time(),
         "color": rgb_to_mlx(255, 255, 0),
-        "target_fps": 60,
+        "target_fps": 59,
     }
-
-
+    
+    
     def update_game(data: object) -> int:
+        if not anim["started"]:
+            return 0
         current_time = time.time()
         dt = current_time - anim["last_time"]
 
@@ -123,25 +157,32 @@ def graphic_mlx() -> None:
 
         anim["last_time"] = current_time
 
-        # 1. Aggiorna la posizione
-        anim["x"] += anim["vx"] * dt
-        anim["y"] += anim["vy"] * dt
+        # 1. Aggiorna la posizione in base a last_key
+        match anim["last_key"]:
+            case Direzione.UP:
+                anim["y"] -= anim["speed"] * dt
+            case Direzione.DOWN:
+                anim["y"] += anim["speed"] * dt
+            case Direzione.LEFT:
+                anim["x"] -= anim["speed"] * dt
+            case Direzione.RIGHT:
+                anim["x"] += anim["speed"] * dt
 
         # 2. Gestione collisione con i bordi (rimbalzo)
-        if anim["x"] <= 0:
+        if anim["x"] <= 1:
             anim["x"] = 0
-            anim["vx"] *= -1
+            anim["last_key"] = None
         elif anim["x"] + anim["size"] >= screen_width:
-            anim["x"] = screen_width - anim["size"]
-            anim["vx"] *= -1
+            anim["x"] = screen_width - anim["size"] - 1
+            anim["last_key"] = None
 
-        if anim["y"] <= 0:
+        if anim["y"] <= 1:
             anim["y"] = 0
-            anim["vy"] *= -1
+            anim["last_key"] = None
         elif anim["y"] + anim["size"] >= screen_height:
-            anim["y"] = screen_height - anim["size"]
-            anim["vy"] *= -1
-
+            anim["y"] = screen_height - anim["size"] - 1
+            anim["last_key"] = None
+          
         # 3. Pulisci il buffer (evita l'effetto scia)
         # Nota: invece di draw_rect puoi azzerare il buffer direttamente per velocità:
         # buffer[:] = b'\x00' * len(buffer)
@@ -155,6 +196,16 @@ def graphic_mlx() -> None:
         m.mlx_string_put(mlx_ptr, win_ptr, 10, 10, 0xFFFFFF, "PAC-MAN 42")
         return 0
 
+        # Hook the window close button ('X'):
+    # - Event 17: DestroyNotify
+    # - Event 33: ClientMessage / WM_DELETE_WINDOW (sent by WSLg window manager)
+    m.mlx_hook(win_ptr, EVENT_DESTROY, 0, close_game, None)
+    m.mlx_hook(win_ptr, EVENT_DESTROY, STRUCTURE_NOTIFY_MASK, close_game, None)
+    m.mlx_hook(win_ptr, EVENT_CLIENT_MESSAGE, 0, close_game, None)
+    m.mlx_hook(win_ptr, EVENT_CLIENT_MESSAGE, STRUCTURE_NOTIFY_MASK, close_game, None)
+
+    # Hook keyboard events
+    m.mlx_hook(win_ptr, EVENT_KEY_PRESS, KEY_PRESS_MASK, on_key_press, None)
     m.mlx_loop_hook(mlx_ptr, update_game, None)
 
     print("Window running. Press ESC, 'q', or click 'X' to exit.")
