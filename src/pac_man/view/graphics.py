@@ -135,20 +135,26 @@ def graphic_mlx() -> None:
                 case Direzione.RIGHT:
                     anim["x"] += anim["speed"] * dt
 
-        # 2. Collisioni (si ferma al bordo)
+# 2. Collisioni (si ferma al bordo, ma permette di scivolare)
         if anim["x"] <= 0:
             anim["x"] = 0.0
-            anim["last_key"] = None
+            if anim["last_key"] == Direzione.LEFT:    # Si ferma solo se sta andando a SINISTRA
+                anim["last_key"] = None
+                
         elif anim["x"] + anim["size"] >= screen_width:
             anim["x"] = float(screen_width - anim["size"])
-            anim["last_key"] = None
+            if anim["last_key"] == Direzione.RIGHT:   # Si ferma solo se sta andando a DESTRA
+                anim["last_key"] = None
 
         if anim["y"] <= 0:
             anim["y"] = 0.0
-            anim["last_key"] = None
+            if anim["last_key"] == Direzione.UP:      # Si ferma solo se sta andando in ALTO
+                anim["last_key"] = None
+                
         elif anim["y"] + anim["size"] >= screen_height:
             anim["y"] = float(screen_height - anim["size"])
-            anim["last_key"] = None
+            if anim["last_key"] == Direzione.DOWN:    # Si ferma solo se sta andando in BASSO
+                anim["last_key"] = None
 
         # 3. Sincronizza per evitare sfarfallii e strappi a schermo
         m.mlx_sync(mlx_ptr, mlx.Mlx.SYNC_IMAGE_WRITABLE, img)
