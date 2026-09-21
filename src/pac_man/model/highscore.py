@@ -1,19 +1,23 @@
 import json
 from pathlib import Path
+from typing import Self
+from pydantic import BaseModel, Field, model_validator
 
 
-class HighscoreManager:
-    """It manages the persistency and validation of the record's ranking"""
+class HighscoreManager(BaseModel):
+    """
+    It manages the persistency and validation of the record's ranking
+    Initialization of the record's manager and existent scores loader
+    Args:
+        filepath (str | Path): Path to the scores JSON file.
+    """
+    filepath: Path = Field(default=Path("highscore.json"))
+    scores: list[dict[str, object]] = Field(default_factory=list)
 
-    def __init__(self, filepath: str | Path = "highscores.json") -> None:
-        """
-        Initialization of the record's manager and existent scores loader
-        Args:
-            filepath (str | Path): Path to the scores JSON file.
-        """
-        self.filepath: Path = Path(filepath)
-        self.scores: list[dict[str, object]] = []
+    @model_validator(model='after')
+    def init_and_load(self) -> Self:
         self.load()
+        return self
 
     def load(self) -> None:
         if not self.filepath.is_file():
@@ -35,7 +39,7 @@ class HighscoreManager:
             )
             self.scores = []
             return
-        
+
         # list[dict] -> [{"name": clean_name, "score": raw_score}]
         loaded_scores = []
         for item in raw_data:
@@ -47,18 +51,18 @@ class HighscoreManager:
             if type(raw_score) is not int or raw_score < 0:
                 continue
             loaded_scores.append({"name": clean_name, "score": raw_score})
-        
+
         loaded_scores.sort(key=lambda item: int(item["score"]), reverse=True)
-        
+
         self.scores = loaded_scores[:10]
-                
+
 
     def _sanitize_name(self, name: object) -> str:
         """Name validation: max 10 char, only alfanumerics and spaces."""
-        
+
         if not isinstance(name, str):
             return "PLAYER"
-        
+
         clean_name = ""
         for char in name:
             if char.isalnum() or char == " ":
@@ -68,7 +72,43 @@ class HighscoreManager:
             return clean_name
         else:
             return "PLAYER"
-            
+
+    def save(self) -> None:
+        """Saves current highscores to the JSON file."""
+        try:
+            with self.filepath.open("w", encoding="utf-8") as f:
+                json.dump(self.scores, f, indent=4)
+        except OSError as e:
+            print(
+                f"[ERROR] Could not save highscores to {self.filepath}: {e}"
+            )
+
+    def is_highscore(self, score: int) -> bool:
+        """Checks if a score qualifies for the top 10 rankings.
+        Args:
+            score (int): The score to evaluate.
+        Returns:
+            bool: True if it qualifies for the top 10, False otherwise.
+        """
+        if not isinstance(score, int) or isinstance(score, bool) or score < 0:
+            return False
+        if len(self.scores) < 10:
+            return True
+        return score > int(self.scores[-1]["score"])
+
+    def add_score(self, name: str, score: int) -> bool:
+        if not self.is_highscore(score):
+            return False
+        clean_name = self._sanitize_name(name)
+        self.scores.append({"name": clean_name, "score": score})
+        self.scores.sort(
+            key=lambda item: item["score"]
+            if isinstance(item["score"], int) else 0,
+            reverse=True
+        )
+        self.scores = self.scores[:10]
+        self.save()
+        return True
 
 
 # ============================================================================

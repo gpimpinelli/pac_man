@@ -4,88 +4,97 @@ Transforms the external bitmask maze into a Pac-Man compatible grid
 with Cell objects, pellets, power pellets, and entity spawn points.
 """
 
+from enum import IntFlag, auto
+from pydantic import BaseModel, ConfigDict, Field
 from mazegenerator import MazeGenerator
 
+class Direction(IntFlag):
+    NONE  = 0
+    WEST = auto()   # 1
+    SOUTH = auto()  # 2
+    EAST  = auto()  # 4
+    NORTH = auto()  # 8
 
-class Cell:
-    """Represents a single cell in the Pac-Man maze grid."""
+    ALL_WALLS =  WEST | SOUTH | EAST | NORTH # 15
 
-    WALL_NORTH = 1
-    WALL_EAST = 2
-    WALL_SOUTH = 4
-    WALL_WEST = 8
-    SOLID_BLOCK = 15
 
-    def __init__(self, x: int, y: int, wall_code: int = 0) -> None:
-        """Initializes a cell at grid coordinates (x, y).
+class Cell(BaseModel):
+    """
+    Represents a single cell in the Pac-Man maze grid.
+    Initializes a cell at grid coordinates (x, y).
 
-        Args:
-            x (int): Horizontal coordinate in the grid.
-            y (int): Vertical coordinate in the grid.
-            wall_code (int): 4-bit wall mask from MazeGenerator.
-        """
-        self.x: int = x
-        self.y: int = y
-        self.wall_code: int = wall_code
+    Args:
+        x (int): Horizontal coordinate in the grid.
+        y (int): Vertical coordinate in the grid.
+        wall_code (int): 4-bit wall mask from MazeGenerator.
+    """
 
-        # Gameplay attributes
-        self.has_pacgum: bool = False
-        self.has_super_pacgum: bool = False
+    model_config = ConfigDict(frozen=True)
+    x: int = Field(default=1, ge=0)
+    y: int = Field(default=1, ge=0)
+    wall_code: Direction = Field(default=Direction.NONE)
+
+    # Gameplay attributes
+    has_pacgum: bool = False
+    has_super_pacgum: bool = False
+
+    def has_wall(self, direction: Direction) -> bool:
+        return bool(self._wall_cod & direction)
 
     @property
     def has_wall_north(self) -> bool:
         """Returns True if the cell has a wall to the North."""
-        return bool(self.wall_code & self.WALL_NORTH)
+        return self.has_wall(Direction.NORTH)
 
     @property
     def has_wall_east(self) -> bool:
         """Returns True if the cell has a wall to the East."""
-        return bool(self.wall_code & self.WALL_EAST)
+        return self.has_wall(Direction.EAST)
 
     @property
     def has_wall_south(self) -> bool:
         """Returns True if the cell has a wall to the South."""
-        return bool(self.wall_code & self.WALL_SOUTH)
+        return self.has_wall(Direction.SOUTH)
 
     @property
     def has_wall_west(self) -> bool:
         """Returns True if the cell has a wall to the West."""
-        return bool(self.wall_code & self.WALL_WEST)
+        return self.has_wall(Direction.WEST)
 
     @property
     def is_solid(self) -> bool:
         """Returns True if this cell is an obstacle (e.g. 42 logo)."""
-        return self.wall_code == self.SOLID_BLOCK
+        return (self.wall_code & Direction.ALL_WALLS) == Direction.ALL_WALLSK
 
 
-class MazeAdapter:
-    """Adapts external MazeGenerator to the Pac-Man game domain."""
+class MazeAdapter(BaseModel):
+    """
+    Adapts external MazeGenerator to the Pac-Man game domain
+    Initializes the adapter and generates the maze grid.
 
-    def __init__(
-        self, width: int = 15, height: int = 15, seed: int = 0
-    ) -> None:
-        """Initializes the adapter and generates the maze grid.
+    Args:
+        width (int): Number of horizontal cells.
+        height (int): Number of vertical cells.
+        seed (int): Seed for maze reproducibility (0 = random).
+    """
+    width: int = Field(..., gt=0)
+    height: int = Field(..., gt=0)
+    seed: int = Field(default=42 gt=0)
 
-        Args:
-            width (int): Number of horizontal cells.
-            height (int): Number of vertical cells.
-            seed (int): Seed for maze reproducibility (0 = random).
-        """
-        self.width: int = width
-        self.height: int = height
-        self.seed: int = seed
+    # Grid of Cell objects: self.grid[y][x]
+    grid: list[list[Cell]] = Field(default_factory=list)
 
-        # Grid of Cell objects: self.grid[y][x]
-        self.grid: list[list[Cell]] = []
+    # Entity spawn coordinates (x, y)
+    player_spawn: tuple[int, int] = (0, 0)
+    ghost_spawns: list[tuple[int, int]] = Field(default_factory=list)
 
-        # Entity spawn coordinates (x, y)
-        self.player_spawn: tuple[int, int] = (0, 0)
-        self.ghost_spawns: list[tuple[int, int]] = []
-
-        # Total number of pellets left to eat for winning the level
-        self.total_pacgums: int = 0
-
+    # Total number of pellets left to eat for winning the level
+    total_pacgums: int = 0
+    
+    @model_validator('after')
+    def init_and_generate_maze(self) -> Self:
         self.generate()
+        return self
 
     def generate(self) -> None:
         """Generates and populates the Pac-Man maze using MazeGenerator."""
