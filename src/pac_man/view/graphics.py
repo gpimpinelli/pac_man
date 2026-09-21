@@ -54,7 +54,7 @@ def graphic_mlx() -> None:
 
     # 2. Initialize display connection
     mlx_ptr = m.mlx_init()
-    screen_width, screen_height = 400, 400
+    screen_width, screen_height = 1024, 764
 
     # 3. Create window
     win_ptr = m.mlx_new_window(mlx_ptr, screen_width, screen_height, "Pac-Man 42")
@@ -111,19 +111,20 @@ def graphic_mlx() -> None:
 
     # 7. Keyboard callback
     def on_key_press(keycode: int, *args: object) -> int:
-        # Opzionale: per fare debug e vedere il codice nella console
         print(f"Key pressed: {keycode}")
         
-        # 1. Controlla prima i tasti di uscita
         if keycode in (KEY_ESC, 27, ord('q'), ord('Q')):
             close_game()
             
-        # 2. Se non è uscito, controlla se è un tasto di movimento
         action = MAPPA_TASTI.get(keycode)
         if action:
-            anim["direction"] = action  # Cambia direzione
-            anim["started"] = True      # Sblocca il gioco
-            anim["last_time"] = time.time()
+            anim["last_key"] = action       # CORREZIONE 1: Usa last_key
+            
+            # CORREZIONE 2: Azzera il tempo SOLO se il gioco era fermo
+            if not anim["started"]:
+                anim["started"] = True
+                anim["last_time"] = time.time()
+                
         return 0
 
 
@@ -134,7 +135,7 @@ def graphic_mlx() -> None:
         "x": 50.0,
         "y": 150.0,
         "size": 40,
-        "speed": 100.0,
+        "speed": 180.0,
         "last_key" : None,
         "started": False,
         "last_time": time.time(),
@@ -144,8 +145,6 @@ def graphic_mlx() -> None:
     
     
     def update_game(data: object) -> int:
-        if not anim["started"]:
-            return 0
         current_time = time.time()
         dt = current_time - anim["last_time"]
 
@@ -158,15 +157,16 @@ def graphic_mlx() -> None:
         anim["last_time"] = current_time
 
         # 1. Aggiorna la posizione in base a last_key
-        match anim["last_key"]:
-            case Direzione.UP:
-                anim["y"] -= anim["speed"] * dt
-            case Direzione.DOWN:
-                anim["y"] += anim["speed"] * dt
-            case Direzione.LEFT:
-                anim["x"] -= anim["speed"] * dt
-            case Direzione.RIGHT:
-                anim["x"] += anim["speed"] * dt
+        if anim["started"]:
+            match anim["last_key"]:
+                case Direzione.UP:
+                    anim["y"] -= anim["speed"] * dt
+                case Direzione.DOWN:
+                    anim["y"] += anim["speed"] * dt
+                case Direzione.LEFT:
+                    anim["x"] -= anim["speed"] * dt
+                case Direzione.RIGHT:
+                    anim["x"] += anim["speed"] * dt
 
         # 2. Gestione collisione con i bordi (rimbalzo)
         if anim["x"] <= 1:
@@ -186,7 +186,7 @@ def graphic_mlx() -> None:
         # 3. Pulisci il buffer (evita l'effetto scia)
         # Nota: invece di draw_rect puoi azzerare il buffer direttamente per velocità:
         # buffer[:] = b'\x00' * len(buffer)
-        draw_rect(0, 0, screen_width, screen_height, 0x000000)
+        draw_rect(0, 0, screen_width, screen_height, 0x050522)
 
         # 4. Disegna l'oggetto nella nuova posizione
         draw_rect(int(anim["x"]), int(anim["y"]), anim["size"], anim["size"], anim["color"])
