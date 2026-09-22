@@ -9,7 +9,7 @@ COLOR_SUPER_PACGUM = 0xFFFF00
 
 
 class Renderer:
-    def __init__(self, view: "GameView", initial_maze: MazeAdapter, view_x: int = 0, view_y: int = 0, view_w: int = None, view_h: int = None, tile_size: int = 64) -> None:
+    def __init__(self, view: "GameView", initial_maze: MazeAdapter, view_x: int = 0, view_y: int = 0, view_w: int = None, view_h: int = None, tile_size: int = 32) -> None:
         self.view: "GameView" = view
         self.tile_size: int = 0
         self.offset_x: int = 0

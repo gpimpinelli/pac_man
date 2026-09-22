@@ -83,7 +83,8 @@ class GameModel(BaseModel):
     # but here a static call is fine since it evaluates to a simple int.
     color: int = Field(default=rgb_to_mlx(255, 255, 0))
     
-    last_key: Optional[Direction] = Field(default=None)
+    current_dir: Optional[Direction] = Field(default=None)
+    desired_dir: Optional[Direction] = Field(default=None)
     started: bool = Field(default=False)
 
     # Disable assignment validation for performance during the 60fps loop
@@ -100,7 +101,7 @@ class GameModel(BaseModel):
             return
 
         # 1. Movement logic
-        match self.last_key:
+        match self.current_dir:
             case Direction.UP:
                 self.y -= self.speed * dt
             case Direction.DOWN:
@@ -113,23 +114,23 @@ class GameModel(BaseModel):
         # 2. Collision logic (stops at the edge but allows wall-sliding)
         if self.x <= 0:
             self.x = 0.0
-            if self.last_key == Direction.LEFT:
-                self.last_key = None
+            if self.current_dir == Direction.LEFT:
+                self.current_dir = None
                 
         elif self.x + self.size >= self.screen_width:
             self.x = float(self.screen_width - self.size)
-            if self.last_key == Direction.RIGHT:
-                self.last_key = None
+            if self.current_dir == Direction.RIGHT:
+                self.current_dir = None
 
         if self.y <= 0:
             self.y = 0.0
-            if self.last_key == Direction.UP:
-                self.last_key = None
+            if self.current_dir == Direction.UP:
+                self.current_dir = None
                 
         elif self.y + self.size >= self.screen_height:
             self.y = float(self.screen_height - self.size)
-            if self.last_key == Direction.DOWN:
-                self.last_key = None
+            if self.current_dir == Direction.DOWN:
+                self.current_dir = None
 
 
 # ==========================================
@@ -179,7 +180,7 @@ class GameView:
             view_y=padding, 
             view_w=minimap_size, 
             view_h=minimap_size,
-            tile_size=16
+            tile_size=10
         )
 
     def clear(self):
@@ -306,7 +307,7 @@ class GameController:
             
         action = KEYS_MAP.get(keycode)
         if action:
-            self.model.last_key = action
+            self.model.current_dir = action
             if not self.model.started:
                 self.model.started = True
                 self.last_time = time.perf_counter()
