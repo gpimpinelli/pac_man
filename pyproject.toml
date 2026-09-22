@@ -7,7 +7,7 @@ authors = [
     { name = "Giovanni Pecelli", email = "imgiovannipecelli@protonmail.com" },
     { name = "Gianluca Pimpinelli", email = "gianluca.pimpinelli@gmail.com" }
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 dependencies = [
     "mazegenerator",
     "mlx",

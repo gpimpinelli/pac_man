@@ -224,8 +224,21 @@ class GameView:
         
         # Draw the mini map
         self.minimap_renderer.draw_maze(model.maze)
-        self.minimap_renderer.draw_player(model.x, model.y, model.size, model.color)
+        
+        # Calculate the logical positoni in pixe of mini map
+        logical_x = (model.x - self.main_renderer.offset_x) / self.main_renderer.tile_size
+        logical_y = (model.y - self.main_renderer.offset_y) / self.main_renderer.tile_size
 
+        # Convert the logical position to scaled pixels on the mini-map
+        mini_px = self.minimap_renderer.offset_x + (logical_x * self.minimap_renderer.tile_size)
+        mini_py = self.minimap_renderer.offset_y + (logical_y * self.minimap_renderer.tile_size)
+
+        # Calculate the player’s size proportionally
+        ratio = self.minimap_renderer.tile_size / self.main_renderer.tile_size
+        mini_size = max(2, int(model.size * ratio))
+
+        # Move the player to the new coordinates
+        self.minimap_renderer.draw_player(mini_px, mini_py, mini_size, model.color)
 
         # mlx_put_image_to_window: Dump the completed off-screen image buffer onto the active window
         self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.img, 0, 0)
@@ -254,14 +267,12 @@ class GameController:
         # Pass the config block to the View
         self.view = GameView(self.config, self.maze)
         
-        self.renderer = Renderer(self.view, self.maze)
-
-        spawn_x, spawn_y = self.renderer.cell_to_pixel(
+        spawn_x, spawn_y = self.view.main_renderer.cell_to_pixel(
             self.maze.player_spawn[0], self.maze.player_spawn[1]
         )
         self.model.x = float(spawn_x)
         self.model.y = float(spawn_y)
-        self.model.size = int(self.renderer.tile_size * 0.5)
+        self.model.size = int(self.view.main_renderer.tile_size * 0.5)
         
         self.setup_hooks()
         
@@ -314,6 +325,7 @@ class GameController:
         self.last_time = current_time
 
         self.model.update(dt)
+        self.view.render(self.model)
         
         return 0
 
