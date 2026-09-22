@@ -36,6 +36,18 @@ class Renderer:
             self.offset_x + cell_x * self.tile_size,
             self.offset_y + cell_y * self.tile_size
         )
+    
+    def center_in_pixel(
+        self,
+        cx: int,
+        cy: int,
+        tile_size: int,
+        size: int
+    ) -> tuple[int, int]:
+        return (
+            cx + (tile_size - size) // 2,
+            cy + (tile_size - size) // 2
+        )
 
     def draw_maze(self, maze: MazeAdapter) -> None:
         # Optimization: save the method's refernce in a local variable
@@ -83,19 +95,16 @@ class Renderer:
                 if cell.has_pacgum:
                     # max(default, value -> 1/8 of the cell)
                     size = max(2, tile_size // 8)
-                    px = cx + (tile_size - size) // 2
-                    py = cy + (tile_size - size) // 2
+                    px, py = self.center_in_pixel(cx, cy, tile_size, size)
                     draw_rect(px,py, size, size, COLOR_PACGUM)
                 
                 if cell.has_super_pacgum:
                     # max(default, value -> 1/8 of the cell)
                     size = max(4, tile_size // 6)
-                    px = cx + (tile_size - size) // 2
-                    py = cy + (tile_size - size) // 2
+                    px, py = self.center_in_pixel(cx, cy, tile_size, size)
                     draw_rect(px,py, size, size, COLOR_SUPER_PACGUM)
                 
-    
-                
-        
-        
-        
+                if cell.has_player:
+                    size = max(4, tile_size // 2)
+                    px, py = self.center_in_pixel(cx, cy, tile_size, size)
+                    draw_rect(px,py, size, size, COLOR_SUPER_PACGUM)

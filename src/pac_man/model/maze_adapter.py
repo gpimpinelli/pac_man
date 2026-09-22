@@ -33,33 +33,37 @@ class Cell:
     x: int
     y: int
     wall_code: Direction = Direction.NONE
+    
+    # Entities
+    has_player: bool = False
+    has_ghost: bool = False
 
     # Gameplay attributes
     has_pacgum: bool = False
     has_super_pacgum: bool = False
 
-    def has_wall(self, direction: Direction) -> bool:
+    def _has_wall(self, direction: Direction) -> bool:
         return bool(self.wall_code & direction)
 
     @property
     def has_wall_north(self) -> bool:
         """Returns True if the cell has a wall to the North."""
-        return self.has_wall(Direction.NORTH)
+        return self._has_wall(Direction.NORTH)
 
     @property
     def has_wall_east(self) -> bool:
         """Returns True if the cell has a wall to the East."""
-        return self.has_wall(Direction.EAST)
+        return self._has_wall(Direction.EAST)
 
     @property
     def has_wall_south(self) -> bool:
         """Returns True if the cell has a wall to the South."""
-        return self.has_wall(Direction.SOUTH)
+        return self._has_wall(Direction.SOUTH)
 
     @property
     def has_wall_west(self) -> bool:
         """Returns True if the cell has a wall to the West."""
-        return self.has_wall(Direction.WEST)
+        return self._has_wall(Direction.WEST)
 
     @property
     def is_solid(self) -> bool:
@@ -127,6 +131,8 @@ class MazeAdapter:
 
         # Positions are (x=0, y=0) -> (width, height)
         self.player_spawn = (self.width // 2, self.height // 2)
+        self.grid[self.width // 2][self.height // 2].has_player = True
+        print(self.grid[self.width // 2][self.height // 2])
         self.ghost_spawns = [
             (0, 0),
             (self.width - 1, 0),
