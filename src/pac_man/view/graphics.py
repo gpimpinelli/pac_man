@@ -170,7 +170,7 @@ class GameView:
 
         # 2. Renderer Minimappa (in alto a destra)
         minimap_size = 200
-        padding = 20
+        padding = 40
         
         self.minimap_renderer = Renderer(
             self, 
@@ -178,7 +178,8 @@ class GameView:
             view_x=self.config.width - minimap_size - padding, 
             view_y=padding, 
             view_w=minimap_size, 
-            view_h=minimap_size
+            view_h=minimap_size,
+            tile_size=16
         )
 
     def clear(self):
@@ -239,7 +240,7 @@ class GameController:
     def __init__(self):
         """Initialize the Controller using Pydantic configurations."""
         
-        self.config = GameConfig(width=1480, height=1024, target_fps=60)
+        self.config = GameConfig(width=1920, height=1210, target_fps=60)
         self.last_time = time.perf_counter()
         self.maze = MazeAdapter(seed=900)
 
