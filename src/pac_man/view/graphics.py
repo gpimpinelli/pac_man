@@ -105,14 +105,14 @@ class GameModel(BaseModel):
     def update(self, dt: float):
         """
         Update the player position and handle collisions.
-
+ 
         Args:
             dt: Delta time elapsed since the last frame, in seconds.
         """
         if not self.started:
             return   
-
-
+ 
+ 
         if self.desired_dir and self.desired_dir != self.current_dir:
             is_opposite = (
                 (self.current_dir == Direction.LEFT and self.desired_dir == Direction.RIGHT) or
@@ -121,7 +121,7 @@ class GameModel(BaseModel):
                 (self.current_dir == Direction.DOWN and self.desired_dir == Direction.UP)
             )
             
-
+ 
             if is_opposite:
                 # Inverti istantaneamente senza calcolare il centro
                 self.current_dir = self.desired_dir
@@ -154,8 +154,35 @@ class GameModel(BaseModel):
                         self.y = rail_y
                         self.current_dir = self.desired_dir
                         self.desired_dir = None
-
-        # 1. Movement logic
+ 
+        # 1. Wall check for STRAIGHT movement (this was missing!)
+        # The `can_turn` block above only validates walls when desired_dir
+        # differs from current_dir (i.e. when turning). If the player keeps
+        # holding the same direction, that block is skipped entirely and
+        # nothing ever stopped movement into a wall/solid cell.
+        if self.current_dir is not None:
+            col = int((self.x - self.offset_x) // self.tile_size)
+            row = int((self.y - self.offset_y) // self.tile_size)
+            cell = self.maze.get_cell(col, row)
+ 
+            blocked = cell is None or cell.is_solid
+            if not blocked:
+                match self.current_dir:
+                    case Direction.UP:
+                        blocked = cell.has_wall_north
+                    case Direction.DOWN:
+                        blocked = cell.has_wall_south
+                    case Direction.LEFT:
+                        blocked = cell.has_wall_west
+                    case Direction.RIGHT:
+                        blocked = cell.has_wall_east
+ 
+            if blocked:
+                # Snap flush to the tile center/rail and stop.
+                self.x, self.y = self.calc_rail()
+                self.current_dir = None
+ 
+        # 2. Movement logic
         match self.current_dir:
             case Direction.UP:
                 self.y -= self.speed * dt
@@ -165,8 +192,9 @@ class GameModel(BaseModel):
                 self.x -= self.speed * dt
             case Direction.RIGHT:
                 self.x += self.speed * dt
-
-        # 2. Collision logic (stops at the edge but allows wall-sliding)
+ 
+        # 3. Screen-edge safety clamp (last-resort guard; maze border cells
+        # should already be walled/solid so this normally never triggers)
         if self.x <= 0:
             self.x = 0.0
             if self.current_dir == Direction.LEFT:
@@ -176,7 +204,7 @@ class GameModel(BaseModel):
             self.x = float(self.screen_width - self.size)
             if self.current_dir == Direction.RIGHT:
                 self.current_dir = None
-
+ 
         if self.y <= 0:
             self.y = 0.0
             if self.current_dir == Direction.UP:

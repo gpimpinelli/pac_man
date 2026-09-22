@@ -113,8 +113,8 @@ class Renderer:
         # offset_visivo_y = y - 20 
         
         self.view.draw_rect_fast(
-            int(x), 
-            int(y),
+            int(x) - size // 2, 
+            int(y) - size // 2,
             size, 
             size, 
             color
