@@ -16,7 +16,7 @@ class Renderer:
         self.offset_y: int = 0
 
         self.setup_layout(initial_maze, view_x, view_y, view_w, view_h)
-
+ 
     def setup_layout(self, maze: MazeAdapter, view_x: int = 0, view_y: int = 0, view_w: int = None, view_h: int = None) -> None:
         screen_w = view_w if view_w is not None else self.view.config.width
         screen_h = view_h if view_h is not None else self.view.config.height
@@ -103,8 +103,18 @@ class Renderer:
                     size = max(4, tile_size // 6)
                     px, py = self.center_in_pixel(cx, cy, tile_size, size)
                     draw_rect(px,py, size, size, COLOR_SUPER_PACGUM)
-                
-                if cell.has_player:
-                    size = max(4, tile_size // 2)
-                    px, py = self.center_in_pixel(cx, cy, tile_size, size)
-                    draw_rect(px,py, size, size, COLOR_SUPER_PACGUM)
+
+
+    def draw_player(self, x: float, y: float, size: int, color: int) -> None:
+        
+        # TRUCCO 2.5D: Spostiamo il disegno verso l'alto di 20 pixel, 
+        # ma senza alterare la vera 'y' del GameModel!
+        # offset_visivo_y = y - 20 
+        
+        self.view.draw_rect_fast(
+            int(x), 
+            int(y),
+            size, 
+            size, 
+            color
+        )

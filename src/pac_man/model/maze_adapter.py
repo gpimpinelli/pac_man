@@ -33,10 +33,7 @@ class Cell:
     x: int
     y: int
     wall_code: Direction = Direction.NONE
-    
-    # Entities
-    has_player: bool = False
-    has_ghost: bool = False
+
 
     # Gameplay attributes
     has_pacgum: bool = False
@@ -131,8 +128,6 @@ class MazeAdapter:
 
         # Positions are (x=0, y=0) -> (width, height)
         self.player_spawn = (self.width // 2, self.height // 2)
-        self.grid[self.width // 2][self.height // 2].has_player = True
-        print(self.grid[self.width // 2][self.height // 2])
         self.ghost_spawns = [
             (0, 0),
             (self.width - 1, 0),

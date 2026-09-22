@@ -211,7 +211,7 @@ class GameView:
         """
         Extract data from the Model and render it to the window.
         """
-        # mlx_sync: Force X11 to finish reading the image buffer before we overwrite it
+        # mlx_sync: Force X11 to finish rdraw_player(self, x: float, y: float, size: int, color: int)eading the image buffer before we overwrite it
         self.m.mlx_sync(self.mlx_ptr, mlx.Mlx.SYNC_IMAGE_WRITABLE, self.img)
         self.clear()
         
@@ -219,10 +219,12 @@ class GameView:
         self.main_renderer.draw_maze(model.maze)
 
         # Draw the player
-        self.draw_rect_fast(int(model.x), int(model.y), model.size, model.size, model.color)
+        self.main_renderer.draw_player(model.x, model.y, model.size, model.color)
         
         # Draw the mini map
         self.minimap_renderer.draw_maze(model.maze)
+        self.minimap_renderer.draw_player(model.x, model.y, model.size, model.color)
+
 
         # mlx_put_image_to_window: Dump the completed off-screen image buffer onto the active window
         self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.img, 0, 0)
