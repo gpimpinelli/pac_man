@@ -1,4 +1,4 @@
-from ..model import MazeAdapter, Cell
+from src.model import MazeAdapter, Cell
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .graphics import GameView
