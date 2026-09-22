@@ -11,7 +11,7 @@ import time
 from enum import Enum, auto
 from ..model import MazeAdapter
 from .renderer import Renderer
-from typing import Optional
+from typing import Optional, Any
 from pydantic import BaseModel, Field, ConfigDict
 
 # ==========================================
@@ -71,6 +71,8 @@ class GameModel(BaseModel):
     screen_width: int = Field(..., gt=0)
     screen_height: int = Field(..., gt=0)
     
+    maze: Any
+
     # Player state & constraints
     x: float = Field(default=50.0, ge=0.0, description="Player X coordinate.")
     y: float = Field(default=150.0, ge=0.0, description="Player Y coordinate.")
@@ -136,7 +138,7 @@ class GameModel(BaseModel):
 class GameView:
     """Handle window creation, rendering, and MLX graphical outputs."""
 
-    def __init__(self, config: GameConfig):
+    def __init__(self, config: GameConfig, maze: MazeAdapter):
         """Initialize the MLX graphical environment using validated config."""
         self.config = config
         
@@ -160,6 +162,24 @@ class GameView:
         # Background buffer cache (Night Blue)
         bg_bytes = bytes([0x22, 0x05, 0x05, 0xFF])
         self._bg_buffer = bg_bytes * (self.buffer_size // self.bytes_per_pixel)
+
+        # --- GESTIONE RENDERER (La View è proprietaria della grafica) ---
+        
+        # 1. Renderer Principale (a tutto schermo)
+        self.main_renderer = Renderer(self, maze)
+
+        # 2. Renderer Minimappa (in alto a destra)
+        minimap_size = 200
+        padding = 20
+        
+        self.minimap_renderer = Renderer(
+            self, 
+            maze, 
+            view_x=self.config.width - minimap_size - padding, 
+            view_y=padding, 
+            view_w=minimap_size, 
+            view_h=minimap_size
+        )
 
     def clear(self):
         """Wipe the screen buffer instantly using a pre-calculated byte array."""
@@ -187,7 +207,7 @@ class GameView:
             start = row * self.size_line + x0 * self.bytes_per_pixel
             self.data[start: start + row_len] = row_bytes
 
-    def render(self, model: GameModel, renderer: Renderer):
+    def render(self, model: GameModel):
         """
         Extract data from the Model and render it to the window.
         """
@@ -195,10 +215,10 @@ class GameView:
         self.m.mlx_sync(self.mlx_ptr, mlx.Mlx.SYNC_IMAGE_WRITABLE, self.img)
         self.clear()
         
-        renderer.draw_maze(renderer.maze)
-        
         self.draw_rect_fast(int(model.x), int(model.y), model.size, model.size, model.color)
         
+        self.minimap_renderer.draw_maze(model.maze)
+
         # mlx_put_image_to_window: Dump the completed off-screen image buffer onto the active window
         self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.img, 0, 0)
 
@@ -214,16 +234,18 @@ class GameController:
         
         self.config = GameConfig(width=1480, height=1024, target_fps=60)
         self.last_time = time.perf_counter()
-        
+        self.maze = MazeAdapter(seed=900)
+
         # Instantiate Model dynamically from config parameters
         self.model = GameModel(
             screen_width=self.config.width,
-            screen_height=self.config.height
+            screen_height=self.config.height,
+            maze=self.maze,
         )
 
         # Pass the config block to the View
-        self.view = GameView(self.config)
-        self.maze = MazeAdapter(seed=900)
+        self.view = GameView(self.config, self.maze)
+        
         self.renderer = Renderer(self.view, self.maze)
 
         spawn_x, spawn_y = self.renderer.cell_to_pixel(
@@ -231,7 +253,7 @@ class GameController:
         )
         self.model.x = float(spawn_x)
         self.model.y = float(spawn_y)
-        self.model.size = int(self.renderer.tile_size * 0.7)
+        self.model.size = int(self.renderer.tile_size * 0.5)
         
         self.setup_hooks()
         
@@ -276,7 +298,7 @@ class GameController:
         current_time = time.perf_counter()
         dt = current_time - self.last_time
         frame_duration = 1.0 / self.config.target_fps
-        self.view.render(self.model, self.renderer)
+        self.view.render(self.model)
 
         if dt < frame_duration:
             return 0

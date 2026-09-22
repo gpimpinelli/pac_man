@@ -9,21 +9,18 @@ COLOR_SUPER_PACGUM = 0xFFFF00
 
 
 class Renderer:
-    def __init__(self, view: "GameView", maze: MazeAdapter) -> None:
+    def __init__(self, view: "GameView", initial_maze: MazeAdapter, view_x: int = 0, view_y: int = 0, view_w: int = None, view_h: int = None) -> None:
         self.view: "GameView" = view
-        self.maze: MazeAdapter = maze
         self.tile_size: int = 0
         self.offset_x: int = 0
         self.offset_y: int = 0
 
-        self.setup_layout(maze)
+        self.setup_layout(initial_maze, view_x, view_y, view_w, view_h)
 
-    def setup_layout(self, maze: MazeAdapter) -> None:
-        self.maze = maze
-
-        screen_w = self.view.config.width
-        screen_h = self.view.config.height
-        margin = 40
+    def setup_layout(self, maze: MazeAdapter, view_x: int = 0, view_y: int = 0, view_w: int = None, view_h: int = None) -> None:
+        screen_w = view_w if view_w is not None else self.view.config.width
+        screen_h = view_h if view_h is not None else self.view.config.height
+        margin = 40 if view_w is None else 5
         
         self.tile_size = min(
             (screen_w - 2 * margin) // maze.width,
