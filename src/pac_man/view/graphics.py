@@ -215,8 +215,13 @@ class GameView:
         self.m.mlx_sync(self.mlx_ptr, mlx.Mlx.SYNC_IMAGE_WRITABLE, self.img)
         self.clear()
         
+        # Draw the main map
+        self.main_renderer.draw_maze(model.maze)
+
+        # Draw the player
         self.draw_rect_fast(int(model.x), int(model.y), model.size, model.size, model.color)
         
+        # Draw the mini map
         self.minimap_renderer.draw_maze(model.maze)
 
         # mlx_put_image_to_window: Dump the completed off-screen image buffer onto the active window
