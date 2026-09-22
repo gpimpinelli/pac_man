@@ -89,6 +89,18 @@ class GameModel(BaseModel):
 
     # Disable assignment validation for performance during the 60fps loop
     model_config = ConfigDict(validate_assignment=False)
+    
+    tile_size: int = Field(default=32)
+    offset_x: int = Field(ge=0)
+    offset_y: int = Field(ge=0)
+    
+    def calc_rail(self) -> tuple[int, int]:
+        col = int(self.x - self.offset_x) // self.tile_size
+        row = int(self.y - self.offset_y) // self.tile_size
+        return(
+            self.offset_x + (col + 0.5) * self.tile_size,
+            self.offset_y + (row + 0.5) * self.tile_size
+        )
 
     def update(self, dt: float):
         """
@@ -100,6 +112,49 @@ class GameModel(BaseModel):
         if not self.started:
             return   
 
+
+        if self.desired_dir and self.desired_dir != self.current_dir:
+            is_opposite = (
+                (self.current_dir == Direction.LEFT and self.desired_dir == Direction.RIGHT) or
+                (self.current_dir == Direction.RIGHT and self.desired_dir == Direction.LEFT) or
+                (self.current_dir == Direction.UP and self.desired_dir == Direction.DOWN) or
+                (self.current_dir == Direction.DOWN and self.desired_dir == Direction.UP)
+            )
+            
+
+            if is_opposite:
+                # Inverti istantaneamente senza calcolare il centro
+                self.current_dir = self.desired_dir
+                self.desired_dir = None
+            else:
+                can_turn = False
+                col = int((self.x - self.offset_x) // self.tile_size)
+                row = int((self.y - self.offset_y) // self.tile_size)
+                current_cell = self.maze.get_cell(col, row)
+                if current_cell and not current_cell.is_solid:
+                    match self.desired_dir:
+                        case Direction.UP:
+                            can_turn = not current_cell.has_wall_north
+                        case Direction.DOWN:
+                            can_turn = not current_cell.has_wall_south
+                        case Direction.LEFT:
+                            can_turn = not current_cell.has_wall_west
+                        case Direction.RIGHT:
+                            can_turn = not current_cell.has_wall_east
+            
+                rail_x, rail_y = self.calc_rail()
+                if can_turn:
+                    if self.current_dir in (Direction.LEFT, Direction.RIGHT):
+                        dist_from_center = abs(self.x - rail_x)
+                    else:
+                        dist_from_center = abs(self.y - rail_y)
+                    tolerance = 6.0
+                    if self.current_dir is None or dist_from_center <= tolerance:
+                        self.x = rail_x
+                        self.y = rail_y
+                        self.current_dir = self.desired_dir
+                        self.desired_dir = None
+
         # 1. Movement logic
         match self.current_dir:
             case Direction.UP:
@@ -110,73 +165,6 @@ class GameModel(BaseModel):
                 self.x -= self.speed * dt
             case Direction.RIGHT:
                 self.x += self.speed * dt
-
-        if self.desired_dir and self.desired_dir != self.current_dir:
-            
-            is_opposite = (
-                (self.current_dir == Direction.LEFT and self.desired_dir == Direction.RIGHT) or
-                (self.current_dir == Direction.RIGHT and self.desired_dir == Direction.LEFT) or
-                (self.current_dir == Direction.UP and self.desired_dir == Direction.DOWN) or
-                (self.current_dir == Direction.DOWN and self.desired_dir == Direction.UP)
-            )
-
-            if is_opposite:
-                # Inverti istantaneamente senza calcolare il centro
-                self.current_dir = self.desired_dir
-                self.desired_dir = None
-
-            match desired_dir:
-                case Direction.RIGHT:
-                    match self.desired_dir:
-                        case Direction.LEFT:
-                            self.x -= self.speed * dt
-                        case Direction.UP:
-                            ...
-                        case Direction.DOWN:
-                            ...
-
-                case Direction.LEFT:
-                
-                    match self.direct.dir:
-                        
-                        case Direction.RIGHT:
-                            self.x += self.speed * dt
-                        case Direction.UP:
-                            ...
-                        case Direction.DOWN:
-                            ...
-                
-                case Direction.UP:
-                    match self.direct.dir:
-                        
-                        case Direction.DOWN:
-                            self.y += self.speed * dt
-                        case Direction.RIGHT:
-                            ...
-                        case Direction.LEFT:
-                            ...
-
-                case Direction.DOWN:
-                    match self.direct.dir:
-                        
-                        case Direction.UP:
-                            self.y -= self.speed * dt
-                        case Direction.RIGHT:
-                            ...
-                        case Direction.LEFT:
-                            ...
-            
-
-            self.current_dir = self.desired_dir
-            self.desired_dir = None
-
-            # if desired_dir is in (Direction.LEFT, Direction.RIGHT) and self.x > 100 | self.x < 104:
-            #     if desired_dir == Direction.LEFT:
-
-            #     else:
-
-            else:
-                
 
         # 2. Collision logic (stops at the edge but allows wall-sliding)
         if self.x <= 0:
@@ -324,22 +312,25 @@ class GameController:
         self.config = GameConfig(width=1640, height=1000, target_fps=60)
         self.last_time = time.perf_counter()
         self.maze = MazeAdapter(seed=900)
+        
+        # Pass the config block to the View
+        self.view = GameView(self.config, self.maze)
 
         # Instantiate Model dynamically from config parameters
         self.model = GameModel(
             screen_width=self.config.width,
             screen_height=self.config.height,
             maze=self.maze,
+            tile_size=self.view.main_renderer.tile_size,
+            offset_x=self.view.main_renderer.offset_x,
+            offset_y=self.view.main_renderer.offset_y,
         )
 
-        # Pass the config block to the View
-        self.view = GameView(self.config, self.maze)
-        
         spawn_x, spawn_y = self.view.main_renderer.cell_to_pixel(
             self.maze.player_spawn[0], self.maze.player_spawn[1]
         )
-        self.model.x = float(spawn_x)
-        self.model.y = float(spawn_y)
+        self.model.x = float(spawn_x + self.view.main_renderer.tile_size // 2)
+        self.model.y = float(spawn_y + self.view.main_renderer.tile_size // 2)
         self.model.size = int(self.view.main_renderer.tile_size * 0.5)
         
         self.setup_hooks()
