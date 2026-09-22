@@ -10,8 +10,8 @@ debug:
 	uv run python -m pdb -m src.pac_man config.json
 
 clean:
-	rm -rf */__pycache__ __pycache__
-	rm -rf */mypy_cache mypy_cache
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	find . -type d -name ".mypy_cache" -exec rm -rf {} +
 	uv cache clean
 
 lint:

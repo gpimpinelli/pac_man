@@ -1,7 +1,7 @@
-from src.model import MazeAdapter, Cell
+from ..model import MazeAdapter, Cell
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from .graphics import GameView
+    from .game_view import GameView
 
 COLOR_WALL = 0x2121DE
 COLOR_PACGUM = 0xFFB8AE

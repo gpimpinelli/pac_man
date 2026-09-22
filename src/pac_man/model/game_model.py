@@ -2,8 +2,7 @@ import os
 import mlx
 import time
 from enum import Enum, auto
-from src.model import MazeAdapter
-from src.view import Renderer, rgb_to_mlx
+from .maze_adapter import MazeAdapter
 from typing import Optional, Any
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -47,9 +46,8 @@ class GameModel(BaseModel):
     size: int = Field(default=40, gt=0, description="Player width/height in pixels.")
     speed: float = Field(default=180.0, gt=0.0, description="Movement speed (pixels/sec).")
     
-    # default_factory is used if a function call is needed, 
-    # but here a static call is fine since it evaluates to a simple int.
-    color: int = Field(default=rgb_to_mlx(255, 255, 0))
+    # Color yellow (0xFFFF00 in 24-bit RGB)
+    color: int = Field(default=0xFFFF00)
     
     current_dir: Optional[Direction] = Field(default=None)
     desired_dir: Optional[Direction] = Field(default=None)

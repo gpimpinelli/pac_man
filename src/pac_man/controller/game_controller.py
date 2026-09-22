@@ -1,13 +1,10 @@
 import os
 import mlx
 import time
-from enum import Enum, auto
-from src.model import MazeAdapter
-from view import Renderer
 from typing import Optional, Any
 from pydantic import BaseModel, Field, ConfigDict
-from src.view import GameView
-from src.model import GameModel
+from ..model import MazeAdapter, GameModel, Direction
+from ..view import GameView
 
 
 # ==========================================
@@ -20,13 +17,6 @@ EVENT_DESTROY = 17
 EVENT_CLIENT_MESSAGE = 33
 KEY_PRESS_MASK = 1 << 0
 STRUCTURE_NOTIFY_MASK = 1 << 17
-
-class Direction(Enum):
-    """Represent the four possible movement directions."""
-    UP = auto()
-    DOWN = auto()
-    LEFT = auto()
-    RIGHT = auto()
 
 KEYS_MAP = {
     65362: Direction.UP,    # Up Arrow

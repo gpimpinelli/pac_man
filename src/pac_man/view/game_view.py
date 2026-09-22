@@ -9,29 +9,11 @@ import os
 import mlx
 import time
 from enum import Enum, auto
-from src.model import MazeAdapter
+from ..model import MazeAdapter, GameModel
 from .renderer import Renderer
 from typing import Optional, Any
 from pydantic import BaseModel, Field, ConfigDict
 
-
-class Direction(Enum):
-    """Represent the four possible movement directions."""
-    UP = auto()
-    DOWN = auto()
-    LEFT = auto()
-    RIGHT = auto()
-
-KEYS_MAP = {
-    65362: Direction.UP,    # Up Arrow
-    119:   Direction.UP,    # w
-    65364: Direction.DOWN,  # Down Arrow
-    115:   Direction.DOWN,  # s
-    65361: Direction.LEFT,  # Left Arrow
-    97:    Direction.LEFT,  # a
-    65363: Direction.RIGHT, # Right Arrow
-    100:   Direction.RIGHT  # d
-}
 
 def rgb_to_mlx(r: int, g: int, b: int) -> int:
     """Convert RGB (0-255) color channels to a 24-bit MLX integer color."""
@@ -44,7 +26,7 @@ def rgb_to_mlx(r: int, g: int, b: int) -> int:
 class GameView:
     """Handle window creation, rendering, and MLX graphical outputs."""
 
-    def __init__(self, config: GameConfig, maze: MazeAdapter):
+    def __init__(self, config: Any, maze: MazeAdapter):
         """Initialize the MLX graphical environment using validated config."""
         self.config = config
         
