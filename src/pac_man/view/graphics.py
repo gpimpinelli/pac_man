@@ -98,7 +98,7 @@ class GameModel(BaseModel):
             dt: Delta time elapsed since the last frame, in seconds.
         """
         if not self.started:
-            return
+            return   
 
         # 1. Movement logic
         match self.current_dir:
@@ -110,6 +110,73 @@ class GameModel(BaseModel):
                 self.x -= self.speed * dt
             case Direction.RIGHT:
                 self.x += self.speed * dt
+
+        if self.desired_dir and self.desired_dir != self.current_dir:
+            
+            is_opposite = (
+                (self.current_dir == Direction.LEFT and self.desired_dir == Direction.RIGHT) or
+                (self.current_dir == Direction.RIGHT and self.desired_dir == Direction.LEFT) or
+                (self.current_dir == Direction.UP and self.desired_dir == Direction.DOWN) or
+                (self.current_dir == Direction.DOWN and self.desired_dir == Direction.UP)
+            )
+
+            if is_opposite:
+                # Inverti istantaneamente senza calcolare il centro
+                self.current_dir = self.desired_dir
+                self.desired_dir = None
+
+            match desired_dir:
+                case Direction.RIGHT:
+                    match self.desired_dir:
+                        case Direction.LEFT:
+                            self.x -= self.speed * dt
+                        case Direction.UP:
+                            ...
+                        case Direction.DOWN:
+                            ...
+
+                case Direction.LEFT:
+                
+                    match self.direct.dir:
+                        
+                        case Direction.RIGHT:
+                            self.x += self.speed * dt
+                        case Direction.UP:
+                            ...
+                        case Direction.DOWN:
+                            ...
+                
+                case Direction.UP:
+                    match self.direct.dir:
+                        
+                        case Direction.DOWN:
+                            self.y += self.speed * dt
+                        case Direction.RIGHT:
+                            ...
+                        case Direction.LEFT:
+                            ...
+
+                case Direction.DOWN:
+                    match self.direct.dir:
+                        
+                        case Direction.UP:
+                            self.y -= self.speed * dt
+                        case Direction.RIGHT:
+                            ...
+                        case Direction.LEFT:
+                            ...
+            
+
+            self.current_dir = self.desired_dir
+            self.desired_dir = None
+
+            # if desired_dir is in (Direction.LEFT, Direction.RIGHT) and self.x > 100 | self.x < 104:
+            #     if desired_dir == Direction.LEFT:
+
+            #     else:
+
+            else:
+                
 
         # 2. Collision logic (stops at the edge but allows wall-sliding)
         if self.x <= 0:
@@ -307,7 +374,7 @@ class GameController:
             
         action = KEYS_MAP.get(keycode)
         if action:
-            self.model.current_dir = action
+            self.model.desired_dir = action
             if not self.model.started:
                 self.model.started = True
                 self.last_time = time.perf_counter()
