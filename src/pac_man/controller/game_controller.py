@@ -5,13 +5,13 @@ from typing import Optional, Any
 from pydantic import BaseModel, Field, ConfigDict
 from ..model import MazeAdapter, GameModel, Direction
 from ..view import GameView
-
+from src.pac_man.model.entity import Ghost
 
 # ==========================================
 # CONSTANTS AND KEY MAPPINGS
 # ==========================================
 KEY_ESC = 65307
-
+COLORS = [0xFF0000, 0xFFB8FF, 0x00FFFF, 0xFFB852]
 EVENT_KEY_PRESS = 2
 EVENT_DESTROY = 17
 EVENT_CLIENT_MESSAGE = 33
@@ -69,9 +69,19 @@ class GameController:
         spawn_x, spawn_y = self.view.main_renderer.cell_to_pixel(
             self.maze.player_spawn[0], self.maze.player_spawn[1]
         )
-        self.model.x = float(spawn_x + self.view.main_renderer.tile_size // 2)
-        self.model.y = float(spawn_y + self.view.main_renderer.tile_size // 2)
         self.model.size = int(self.view.main_renderer.tile_size * 0.5)
+        half_tile = self.view.main_renderer.tile_size // 2
+        self.model.player.x = float(spawn_x + half_tile)
+        self.model.player.y = float(spawn_y + half_tile)       
+        
+        self.model.ghosts = [
+            Ghost(
+                x=float(self.view.main_renderer.cell_to_pixel(coords[0], coords[1])[0] + half_tile),
+                y=float(self.view.main_renderer.cell_to_pixel(coords[0], coords[1])[1] + half_tile),
+                color=c
+            )
+            for coords, c in zip(self.maze.ghost_spawns, COLORS)
+        ]
         
         self.setup_hooks()
         
@@ -105,7 +115,7 @@ class GameController:
             
         action = KEYS_MAP.get(keycode)
         if action:
-            self.model.desired_dir = action
+            self.model.player.desired_dir = action
             if not self.model.started:
                 self.model.started = True
                 self.last_time = time.perf_counter()

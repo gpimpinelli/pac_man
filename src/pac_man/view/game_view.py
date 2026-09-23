@@ -96,6 +96,22 @@ class GameView:
             start = row * self.size_line + x0 * self.bytes_per_pixel
             self.data[start: start + row_len] = row_bytes
 
+
+    def position_in_minimap(self, x: int, y: int, size: int, color: int):
+        # Calculate the logical positoni in pixe of mini map
+        logical_x = (x - self.main_renderer.offset_x) / self.main_renderer.tile_size
+        logical_y = (y - self.main_renderer.offset_y) / self.main_renderer.tile_size
+
+        # Convert the logical position to scaled pixels on the mini-map
+        mini_px = self.minimap_renderer.offset_x + (logical_x * self.minimap_renderer.tile_size)
+        mini_py = self.minimap_renderer.offset_y + (logical_y * self.minimap_renderer.tile_size)
+
+        # Calculate the player’s size proportionally
+        ratio = self.minimap_renderer.tile_size / self.main_renderer.tile_size
+        mini_size = max(2, int(size * ratio))
+        self.minimap_renderer.draw_player(mini_px, mini_py, mini_size, color)
+
+
     def render(self, model: GameModel):
         """
         Extract data from the Model and render it to the window.
@@ -108,25 +124,17 @@ class GameView:
         self.main_renderer.draw_maze(model.maze)
 
         # Draw the player
-        self.main_renderer.draw_player(model.x, model.y, model.size, model.color)
-        
+        self.main_renderer.draw_player(model.player.x, model.player.y, model.size, model.player.color)
+        for ghost in model.ghosts:
+            self.main_renderer.draw_player(ghost.x, ghost.y, model.size, ghost.color)
+
         # Draw the mini map
         self.minimap_renderer.draw_maze(model.maze)
-        
-        # Calculate the logical positoni in pixe of mini map
-        logical_x = (model.x - self.main_renderer.offset_x) / self.main_renderer.tile_size
-        logical_y = (model.y - self.main_renderer.offset_y) / self.main_renderer.tile_size
-
-        # Convert the logical position to scaled pixels on the mini-map
-        mini_px = self.minimap_renderer.offset_x + (logical_x * self.minimap_renderer.tile_size)
-        mini_py = self.minimap_renderer.offset_y + (logical_y * self.minimap_renderer.tile_size)
-
-        # Calculate the player’s size proportionally
-        ratio = self.minimap_renderer.tile_size / self.main_renderer.tile_size
-        mini_size = max(2, int(model.size * ratio))
 
         # Move the player to the new coordinates
-        self.minimap_renderer.draw_player(mini_px, mini_py, mini_size, model.color)
+        self.position_in_minimap(model.player.x, model.player.y, model.size, model.player.color)
+        for ghost in model.ghosts:
+            self.position_in_minimap(ghost.x, ghost.y, model.size, ghost.color)
 
         # mlx_put_image_to_window: Dump the completed off-screen image buffer onto the active window
         self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.img, 0, 0)

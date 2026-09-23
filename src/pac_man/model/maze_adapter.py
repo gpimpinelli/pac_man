@@ -67,6 +67,11 @@ class Cell:
         """Returns True if this cell is an obstacle (e.g. 42 logo)."""
         return (self.wall_code & Direction.ALL_WALLS) == Direction.ALL_WALLS
 
+    def remove_gum(self, is_super: bool) -> None:
+        if is_super:
+            self.has_super_pacgum = False
+        else:
+            self.has_pacgum = False
 
 class MazeAdapter:
     """Adapts external MazeGenerator to the Pac-Man game domain."""
