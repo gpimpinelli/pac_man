@@ -15,10 +15,15 @@ class GhostState(Enum):
 class Ghost(Entity):
     state: GhostState = GhostState.SCATTER
     last_decision_cell: tuple[int, int] = (-1, -1)
+    
+    def _entity_position(self, x: int, y: int, game_state) -> tuple[int, int]:
+        return (
+            int((x - game_state.offset_x) // game_state.tile_size),
+            int((y - game_state.offset_y) // game_state.tile_size)
+        )
 
     def update_intention(self, game_state) -> None:
-        col = int((self.x - game_state.offset_x) // game_state.tile_size)
-        row = int((self.y - game_state.offset_y) // game_state.tile_size)
+        col, row = self._entity_position(self.x, self.y, game_state)
 
         if (col, row) == self.last_decision_cell and self.current_dir is not None:
             return
@@ -57,7 +62,44 @@ class Ghost(Entity):
                 self.desired_dir = random.choice(possible_dirs)
 
             case GhostState.CHASE:
-                pass
+                player_x, player_y = self._entity_position(
+                    game_state.player.x, game_state.player.y, game_state
+                )
+                neighbor_cells: list[tuple[Direction, Cell]] = []
+                for d in possible_dirs:
+                    match d:
+                        case Direction.UP:
+                            neighbor_cells.append(
+                                (d, game_state.maze.get_cell(col, row - 1))
+                            )
+                        case Direction.DOWN:
+                            neighbor_cells.append(
+                                (d, game_state.maze.get_cell(col, row + 1))
+                            )
+                        case Direction.RIGHT:
+                            neighbor_cells.append(
+                                (d, game_state.maze.get_cell(col + 1, row))
+                            )
+                        case Direction.LEFT:
+                            neighbor_cells.append(
+                                (d, game_state.maze.get_cell(col - 1, row))
+                            )
+                    min_dist = float("inf")
+                    best_dir = None
+                    for d, cell in neighbor_cells:
+                        if cell is None:
+                            continue
+
+                        dist = math.dist(
+                            (cell.x, cell.y), (player_x, player_y)
+                        )
+                        if dist < min_dist:
+                            min_dist = dist
+                            best_dir = d
+                    
+                    self.desired_dir = best_dir
+                        
+                    
 
             case GhostState.FRIGHTENED:
                 # TODO: Scapperà (sceglierà la distanza MAGGIORE anziché minore)
