@@ -95,7 +95,7 @@ class GameModel(BaseModel):
                 (entity.current_dir == Direction.DOWN and entity.desired_dir == Direction.UP)
             )
 
-            if is_opposite:
+            if is_opposite and isinstance(entity, Player):
                 # Inverti istantaneamente senza calcolare il centro
                 entity.current_dir = entity.desired_dir
                 entity.desired_dir = None

@@ -78,7 +78,8 @@ class GameController:
             Ghost(
                 x=float(self.view.main_renderer.cell_to_pixel(coords[0], coords[1])[0] + half_tile),
                 y=float(self.view.main_renderer.cell_to_pixel(coords[0], coords[1])[1] + half_tile),
-                color=c
+                color=c,
+                speed=100
             )
             for coords, c in zip(self.maze.ghost_spawns, COLORS)
         ]
