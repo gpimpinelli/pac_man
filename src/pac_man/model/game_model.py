@@ -1,7 +1,7 @@
 import os
 import mlx
 import time
-from .entity import Direction
+from .entity import Direction, Entity
 from .maze_adapter import MazeAdapter
 from typing import Optional, Any
 from pydantic import BaseModel, Field, ConfigDict
@@ -36,9 +36,9 @@ class GameModel(BaseModel):
     ghosts: list[Ghost] = Field(default_factory=list)
 
     
-    def calc_rail(self) -> tuple[int, int]:
-        col = int(self.player.x - self.offset_x) // self.tile_size
-        row = int(self.player.y - self.offset_y) // self.tile_size
+    def calc_rail(self, entity: Entity) -> tuple[int, int]:
+        col = int(entity.x - self.offset_x) // self.tile_size
+        row = int(entity.y - self.offset_y) // self.tile_size
         return(
             self.offset_x + (col + 0.5) * self.tile_size,
             self.offset_y + (row + 0.5) * self.tile_size
@@ -74,37 +74,38 @@ class GameModel(BaseModel):
         if not self.started:
             return
 
-        self._handle_player_steering(dt)
+        self._handle_steering(self.player, dt)
         self._apply_movement(self.player, dt)
         self._handle_wall_collisions(self.player)
 
         # TODO
         # In futuro, per i fantasmi basterà fare questo!
-        # for ghost in self.ghosts:
-        #     ghost.update_intention(self)
-        #     self._apply_movement(ghost, dt)
-        #     self._handle_wall_collisions(ghost)
+        for ghost in self.ghosts:
+            ghost.update_intention(self)
+            self._handle_steering(ghost, dt)
+            self._apply_movement(ghost, dt)
+            self._handle_wall_collisions(ghost)
 
-    def _handle_player_steering(self, dt: float):
-        if self.player.desired_dir and self.player.desired_dir != self.player.current_dir:
+    def _handle_steering(self, entity: Entity, dt: float):
+        if entity.desired_dir and entity.desired_dir != entity.current_dir:
             is_opposite = (
-                (self.player.current_dir == Direction.LEFT and self.player.desired_dir == Direction.RIGHT) or
-                (self.player.current_dir == Direction.RIGHT and self.player.desired_dir == Direction.LEFT) or
-                (self.player.current_dir == Direction.UP and self.player.desired_dir == Direction.DOWN) or
-                (self.player.current_dir == Direction.DOWN and self.player.desired_dir == Direction.UP)
+                (entity.current_dir == Direction.LEFT and entity.desired_dir == Direction.RIGHT) or
+                (entity.current_dir == Direction.RIGHT and entity.desired_dir == Direction.LEFT) or
+                (entity.current_dir == Direction.UP and entity.desired_dir == Direction.DOWN) or
+                (entity.current_dir == Direction.DOWN and entity.desired_dir == Direction.UP)
             )
 
             if is_opposite:
                 # Inverti istantaneamente senza calcolare il centro
-                self.player.current_dir = self.player.desired_dir
-                self.player.desired_dir = None
+                entity.current_dir = entity.desired_dir
+                entity.desired_dir = None
             else:
                 can_turn = False
-                col = int((self.player.x - self.offset_x) // self.tile_size)
-                row = int((self.player.y - self.offset_y) // self.tile_size)
+                col = int((entity.x - self.offset_x) // self.tile_size)
+                row = int((entity.y - self.offset_y) // self.tile_size)
                 current_cell = self.maze.get_cell(col, row)
                 if current_cell and not current_cell.is_solid:
-                    match self.player.desired_dir:
+                    match entity.desired_dir:
                         case Direction.UP:
                             can_turn = not current_cell.has_wall_north
                         case Direction.DOWN:
@@ -114,20 +115,20 @@ class GameModel(BaseModel):
                         case Direction.RIGHT:
                             can_turn = not current_cell.has_wall_east
             
-                rail_x, rail_y = self.calc_rail()
+                rail_x, rail_y = self.calc_rail(entity)
                 if can_turn:
-                    if self.player.current_dir in (Direction.LEFT, Direction.RIGHT):
-                        dist_from_center = abs(self.player.x - rail_x)
+                    if entity.current_dir in (Direction.LEFT, Direction.RIGHT):
+                        dist_from_center = abs(entity.x - rail_x)
                     else:
-                        dist_from_center = abs(self.player.y - rail_y)
+                        dist_from_center = abs(entity.y - rail_y)
                     # ================== Avoid Snap Jitter ==================
                     # Calculate the exact distance traveled this frame
-                    tolerance = self.player.speed * dt
-                    if self.player.current_dir is None or dist_from_center <= tolerance:
-                        self.player.x = rail_x
-                        self.player.y = rail_y
-                        self.player.current_dir = self.player.desired_dir
-                        self.player.desired_dir = None
+                    tolerance = entity.speed * dt
+                    if entity.current_dir is None or dist_from_center <= tolerance:
+                        entity.x = rail_x
+                        entity.y = rail_y
+                        entity.current_dir = entity.desired_dir
+                        entity.desired_dir = None
 
     def _apply_movement(self, entity: Entity, dt: float):
         match entity.current_dir:
@@ -140,8 +141,8 @@ class GameModel(BaseModel):
             case Direction.RIGHT:
                 entity.x += entity.speed * dt
 
-    def _handle_wall_collisions(self, entity):
-        if self.player.current_dir is not None:
+    def _handle_wall_collisions(self, entity: Entity):
+        if entity.current_dir is not None:
             col = int((entity.x - self.offset_x) // self.tile_size)
             row = int((entity.y - self.offset_y) // self.tile_size)
             cell = self.maze.get_cell(col, row)
@@ -159,7 +160,7 @@ class GameModel(BaseModel):
                         blocked = cell.has_wall_east
  
             if blocked:
-                rail_x, rail_y = self.calc_rail()
+                rail_x, rail_y = self.calc_rail(entity)
                 must_stop = False
                 match entity.current_dir:
                     case Direction.UP:
@@ -173,6 +174,6 @@ class GameModel(BaseModel):
                
                 # Snap flush to the tile center/rail and stop.
                 if must_stop: 
-                    entity.x, entity.y = self.calc_rail()
+                    entity.x, entity.y = self.calc_rail(entity)
                     entity.current_dir = None
  

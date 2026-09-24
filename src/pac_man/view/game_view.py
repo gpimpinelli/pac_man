@@ -125,16 +125,16 @@ class GameView:
 
         # Draw the player
         self.main_renderer.draw_player(model.player.x, model.player.y, model.size, model.player.color)
-        for ghost in model.ghosts:
-            self.main_renderer.draw_player(ghost.x, ghost.y, model.size, ghost.color)
+        # for ghost in model.ghosts:
+        #     self.main_renderer.draw_player(ghost.x, ghost.y, model.size, ghost.color)
 
         # Draw the mini map
         self.minimap_renderer.draw_maze(model.maze)
 
         # Move the player to the new coordinates
         self.position_in_minimap(model.player.x, model.player.y, model.size, model.player.color)
-        for ghost in model.ghosts:
-            self.position_in_minimap(ghost.x, ghost.y, model.size, ghost.color)
+        # for ghost in model.ghosts:
+        #     self.position_in_minimap(ghost.x, ghost.y, model.size, ghost.color)
 
         # mlx_put_image_to_window: Dump the completed off-screen image buffer onto the active window
         self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.img, 0, 0)

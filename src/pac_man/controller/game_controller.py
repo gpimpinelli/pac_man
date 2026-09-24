@@ -126,7 +126,6 @@ class GameController:
         current_time = time.perf_counter()
         dt = current_time - self.last_time
         frame_duration = 1.0 / self.config.target_fps
-        self.view.render(self.model)
 
         if dt < frame_duration:
             return 0
