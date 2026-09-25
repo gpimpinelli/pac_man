@@ -58,7 +58,7 @@ class GameView:
 
         # 2. Renderer Minimappa (in alto a destra)
         minimap_size = 200
-        padding = 40
+        padding = 50
         
         self.minimap_renderer = Renderer(
             self, 
