@@ -30,8 +30,7 @@ class Cell:
         wall_code (int): 4-bit wall mask from MazeGenerator.
     """
 
-    x: int
-    y: int
+    coords: tuple[int, int]
     wall_code: Direction = Direction.NONE
 
 
@@ -130,7 +129,7 @@ class MazeAdapter:
                 # & AND bitwise operator: return 1 if both are 1
                 # comparing raw_code(binary value) with ALL_WALL.value(1111)
                 wall_code = Direction(raw_code & Direction.ALL_WALLS.value)
-                cell = Cell(x=x, y=y, wall_code=wall_code)
+                cell = Cell(coords=(x, y), wall_code=wall_code)
                 row.append(cell)
             self.grid.append(row)
 
@@ -146,13 +145,11 @@ class MazeAdapter:
         self.total_pacgums = 0
         for row in self.grid:
             for cell in row:
-                pos = (cell.x, cell.y)
-
                 # Pass solid cell and player spawn
-                if cell.is_solid or pos == self.player_spawn:
+                if cell.is_solid or cell.coords == self.player_spawn:
                     continue
                 # Super pacgum if cell is a ghost spawn
-                if pos in self.ghost_spawns:
+                if cell.coords in self.ghost_spawns:
                     cell.has_super_pacgum = True
                     self.total_pacgums += 1
                 else:

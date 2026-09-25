@@ -25,11 +25,11 @@ class Ghost(Entity):
         short: bool = True
     ) -> None:
 
-        col, row = pixel_to_cell(self.x, self.y, game_state.offset_x, game_state.offset_y, game_state.tile_size)
+        curr_coords = pixel_to_cell((self.x, self.y), (game_state.offset_x, game_state.offset_y), game_state.tile_size)
         best_dist = float("inf") if short else -1.0
         best_dir = possible_dirs[0]
         for d in possible_dirs:
-            test_col, test_row= col, row
+            test_col, test_row= curr_coords
             match d:
                 case Direction.UP: test_row -= 1
                 case Direction.DOWN: test_row += 1
@@ -46,7 +46,7 @@ class Ghost(Entity):
                         
 
     def update_intention(self, game_state) -> None:
-        col, row = pixel_to_cell(self.x, self.y, game_state.offset_x, game_state.offset_y, game_state.tile_size)
+        col, row = pixel_to_cell((self.x, self.y), (game_state.offset_x, game_state.offset_y), game_state.tile_size)
 
         if (col, row) == self.last_decision_cell and self.current_dir is not None:
             return
@@ -85,15 +85,15 @@ class Ghost(Entity):
                 self.desired_dir = random.choice(possible_dirs)
 
             case GhostState.CHASE:
-                player_col, player_row = pixel_to_cell(game_state.player.x, game_state.player.y, game_state.offset_x, game_state.offset_y, game_state.tile_size)
+                player_col, player_row = pixel_to_cell((game_state.player.x, game_state.player.y), (game_state.offset_x, game_state.offset_y), game_state.tile_size)
                 self._evaluate_path(game_state=game_state, possible_dirs=possible_dirs, cell_col=player_col, cell_row=player_row)
 
             case GhostState.FRIGHTENED:
-                player_col, player_row = pixel_to_cell(game_state.player.x, game_state.player.y, game_state.offset_x, game_state.offset_y, game_state.tile_size)
+                player_col, player_row = pixel_to_cell((game_state.player.x, game_state.player.y), (game_state.offset_x, game_state.offset_y), game_state.tile_size)
                 self._evaluate_path(game_state=game_state, possible_dirs=possible_dirs, cell_col=player_col, cell_row=player_row, short=False)
 
             case GhostState.EATEN:
-                spawn_col, spawn_row = player_col, player_row = pixel_to_cell(self.coords_spawn[0], self.coords_spawn[1], game_state.offset_x, game_state.offset_y, game_state.tile_size)
+                spawn_col, spawn_row = player_col, player_row = pixel_to_cell(self.coords_spawn, (game_state.offset_x, game_state.offset_y), game_state.tile_size)
                 self._evaluate_path(game_state=game_state, possible_dirs=possible_dirs, cell_col=spawn_col, cell_row=spawn_row)
 
         self.last_decision_cell = (col, row)

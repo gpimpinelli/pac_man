@@ -69,7 +69,7 @@ class GameView:
         """Wipe the screen buffer instantly using a pre-calculated byte array."""
         self.data[0:self.buffer_size] = self._bg_buffer
 
-    def draw_rect_fast(self, x: int, y: int, w: int, h: int, color: int):
+    def draw_rect_fast(self, coords: tuple[int, int], w: int, h: int, color: int):
         """
         Draw a solid rectangle in the image buffer using direct byte manipulation.
         """
@@ -77,8 +77,8 @@ class GameView:
         g_ch = (color >> 8) & 0xFF
         r_ch = (color >> 16) & 0xFF
 
-        x0, y0 = max(0, x), max(0, y)
-        x1, y1 = min(x + w, self.config.width), min(y + h, self.config.height)
+        x0, y0 = max(0, coords[0]), max(0, coords[1])
+        x1, y1 = min(coords[0] + w, self.config.width), min(coords[1] + h, self.config.height)
         actual_w = x1 - x0
         
         if actual_w <= 0 or y1 <= y0:

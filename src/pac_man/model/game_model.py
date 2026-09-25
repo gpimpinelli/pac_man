@@ -39,7 +39,7 @@ class GameModel(BaseModel):
                 ghost.state = new_state
     
     def calc_rail(self, entity: Entity) -> tuple[int, int]:
-        col, row = pixel_to_cell(entity.x, entity.y, self.offset_x, self.offset_y, self.tile_size)
+        col, row = pixel_to_cell((entity.x, entity.y), (self.offset_x, self.offset_y), self.tile_size)
         return(
             self.offset_x + (col + 0.5) * self.tile_size,
             self.offset_y + (row + 0.5) * self.tile_size
@@ -47,7 +47,7 @@ class GameModel(BaseModel):
 
     def _check_and_eat_gum(self) -> None:
         """Check the current cell and eat the pac gum"""
-        col, row = pixel_to_cell(self.player.x, self.player.y, self.offset_x, self.offset_y, self.tile_size)
+        col, row = pixel_to_cell((self.player.x, self.player.y), (self.offset_x, self.offset_y), self.tile_size)
         
         cell: Cell = self.maze.get_cell(col, row)
         
@@ -115,7 +115,7 @@ class GameModel(BaseModel):
                 entity.desired_dir = None
             else:
                 can_turn = False
-                col, row = pixel_to_cell(entity.x, entity.y, self.offset_x, self.offset_y, self.tile_size)
+                col, row = pixel_to_cell((entity.x, entity.y), (self.offset_x, self.offset_y), self.tile_size)
                 current_cell = self.maze.get_cell(col, row)
                 if current_cell and not current_cell.is_solid:
                     match entity.desired_dir:
@@ -156,7 +156,7 @@ class GameModel(BaseModel):
 
     def _handle_wall_collisions(self, entity: Entity):
         if entity.current_dir is not None:
-            col, row = pixel_to_cell(entity.x, entity.y, self.offset_x, self.offset_y, self.tile_size)
+            col, row = pixel_to_cell((entity.x, entity.y), (self.offset_x, self.offset_y), self.tile_size)
             cell = self.maze.get_cell(col, row)
  
             blocked = cell is None or cell.is_solid

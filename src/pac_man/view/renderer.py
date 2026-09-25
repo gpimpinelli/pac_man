@@ -43,34 +43,34 @@ class Renderer:
         
         for row in maze.grid:
             for cell in row:
-                cx, cy = cell_to_pixel(cell.x, cell.y, self.offset_x, self.offset_y, self.tile_size)
+                cx, cy = cell_to_pixel(cell.coords, (self.offset_x, self.offset_y), self.tile_size)
                 
                 if cell.is_solid:
                     draw_rect(
-                        cx, cy, tile_size, tile_size, COLOR_WALL
+                        (cx, cy), tile_size, tile_size, COLOR_WALL
                     )
                     continue
 
                 if cell.has_wall_north:
                     draw_rect(
-                        cx, cy, tile_size, wall_thick, COLOR_WALL
+                        (cx, cy), tile_size, wall_thick, COLOR_WALL
                     )
                 if cell.has_wall_south:
                     draw_rect(
-                        cx,
-                        cy + tile_size - wall_thick,
+                        (cx,
+                        cy + tile_size - wall_thick),
                         tile_size,
                         wall_thick,
                         COLOR_WALL
                     )
                 if cell.has_wall_west:
                     draw_rect(
-                        cx, cy, wall_thick, tile_size, COLOR_WALL
+                        (cx, cy), wall_thick, tile_size, COLOR_WALL
                     )
                 if cell.has_wall_east:
                     draw_rect(
-                        cx + tile_size - wall_thick,
-                        cy,
+                        (cx + tile_size - wall_thick,
+                        cy),
                         wall_thick,
                         tile_size,
                         COLOR_WALL
@@ -79,14 +79,14 @@ class Renderer:
                 if cell.has_pacgum:
                     # max(default, value -> 1/8 of the cell)
                     size = max(2, tile_size // 8)
-                    px, py = center_in_pixel(cx, cy, tile_size, size)
-                    draw_rect(px,py, size, size, COLOR_PACGUM)
+                    px, py = center_in_pixel((cx, cy), tile_size, size)
+                    draw_rect((px,py), size, size, COLOR_PACGUM)
                 
                 if cell.has_super_pacgum:
                     # max(default, value -> 1/8 of the cell)
                     size = max(4, tile_size // 6)
-                    px, py = center_in_pixel(cx, cy, tile_size, size)
-                    draw_rect(px,py, size, size, COLOR_SUPER_PACGUM)
+                    px, py = center_in_pixel((cx, cy), tile_size, size)
+                    draw_rect((px,py), size, size, COLOR_SUPER_PACGUM)
 
 
     def draw_player(self, x: float, y: float, size: int, color: int) -> None:
@@ -96,8 +96,8 @@ class Renderer:
         # offset_visivo_y = y - 20 
         
         self.view.draw_rect_fast(
-            int(x) - size // 2, 
-            int(y) - size // 2,
+            (int(x) - size // 2, 
+            int(y) - size // 2),
             size, 
             size, 
             color

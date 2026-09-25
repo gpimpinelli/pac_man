@@ -66,10 +66,9 @@ class GameController:
         )
 
         spawn_x, spawn_y = cell_to_pixel(
-            self.maze.player_spawn[0],
-            self.maze.player_spawn[1],
-            self.view.main_renderer.offset_x,
-            self.view.main_renderer.offset_y,
+            self.maze.player_spawn,
+            (self.view.main_renderer.offset_x,
+            self.view.main_renderer.offset_y),
             self.view.main_renderer.tile_size,
         )
         self.model.size = int(self.view.main_renderer.tile_size * 0.5)
@@ -87,7 +86,7 @@ class GameController:
 
         speed = 100
         for coords, c in zip(self.maze.ghost_spawns, COLORS):
-            coords_pixel: tuple[int, int] = cell_to_pixel(coords[0], coords[1], self.view.main_renderer.offset_x, self.view.main_renderer.offset_y, self.view.main_renderer.tile_size)
+            coords_pixel: tuple[int, int] = cell_to_pixel(coords, (self.view.main_renderer.offset_x, self.view.main_renderer.offset_y), self.view.main_renderer.tile_size)
             x_pixel = float(coords_pixel[0] + half_tile)
             y_pixel = float(coords_pixel[1] + half_tile)
             self.model.ghosts.append(
