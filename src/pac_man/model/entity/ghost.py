@@ -13,6 +13,7 @@ class GhostState(Enum):
 
 
 class Ghost(Entity):
+    coords_spawn: tuple[int, int] = (0, 0)
     state: GhostState = GhostState.SCATTER
     last_decision_cell: tuple[int, int] = (-1, -1)
     
@@ -21,6 +22,27 @@ class Ghost(Entity):
             int((x - game_state.offset_x) // game_state.tile_size),
             int((y - game_state.offset_y) // game_state.tile_size)
         )
+
+    def _evaluate_path(self, game_state, possible_dirs: list[Direction], cell_col: int, cell_row: int, short: bool = True):
+        col, row = self._entity_position(self.x, self.y, game_state)
+        best_dist = float("inf") if short else -1.0
+        best_dir = possible_dirs[0]
+        for d in possible_dirs:
+            test_col, test_row= col, row
+            match d:
+                case Direction.UP: test_row -= 1
+                case Direction.DOWN: test_row += 1
+                case Direction.RIGHT: test_col += 1
+                case Direction.LEFT: test_col -= 1
+
+            dist = math.dist((test_col, test_row), (cell_col, cell_row))
+
+            if (short and dist < best_dist) or (not short and dist > best_dist):
+                best_dist = dist
+                best_dir = d
+
+        self.desired_dir = best_dir
+                        
 
     def update_intention(self, game_state) -> None:
         col, row = self._entity_position(self.x, self.y, game_state)
@@ -62,52 +84,25 @@ class Ghost(Entity):
                 self.desired_dir = random.choice(possible_dirs)
 
             case GhostState.CHASE:
-                player_x, player_y = self._entity_position(
+                player_col, player_row = self._entity_position(
                     game_state.player.x, game_state.player.y, game_state
                 )
-                neighbor_cells: list[tuple[Direction, Cell]] = []
-                for d in possible_dirs:
-                    match d:
-                        case Direction.UP:
-                            neighbor_cells.append(
-                                (d, game_state.maze.get_cell(col, row - 1))
-                            )
-                        case Direction.DOWN:
-                            neighbor_cells.append(
-                                (d, game_state.maze.get_cell(col, row + 1))
-                            )
-                        case Direction.RIGHT:
-                            neighbor_cells.append(
-                                (d, game_state.maze.get_cell(col + 1, row))
-                            )
-                        case Direction.LEFT:
-                            neighbor_cells.append(
-                                (d, game_state.maze.get_cell(col - 1, row))
-                            )
-                    min_dist = float("inf")
-                    best_dir = None
-                    for d, cell in neighbor_cells:
-                        if cell is None:
-                            continue
-
-                        dist = math.dist(
-                            (cell.x, cell.y), (player_x, player_y)
-                        )
-                        if dist < min_dist:
-                            min_dist = dist
-                            best_dir = d
-                    
-                    self.desired_dir = best_dir
+                self._evaluate_path(game_state=game_state, possible_dirs=possible_dirs, cell_col=player_col, cell_row=player_row)
                         
                     
 
             case GhostState.FRIGHTENED:
-                # TODO: Scapperà (sceglierà la distanza MAGGIORE anziché minore)
-                pass
+                player_col, player_row = self._entity_position(
+                    game_state.player.x, game_state.player.y, game_state
+                )
+                self._evaluate_path(game_state=game_state, possible_dirs=possible_dirs, cell_col=player_col, cell_row=player_row, short=False)
+                        
 
             case GhostState.EATEN:
-                # TODO: Tornerà alla base (il target sarà la cella della tana)
-                pass
+                spawn_col, spawn_row = self._entity_position(
+                    self.coords_spawn[0], self.coords_spawn[1], game_state
+                )
+                self._evaluate_path(game_state=game_state, possible_dirs=possible_dirs, cell_col=spawn_col, cell_row=spawn_row)
             
         # Fuori dal match block: viene eseguito per tutti gli stati
         self.last_decision_cell = (col, row)

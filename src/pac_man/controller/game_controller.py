@@ -5,7 +5,7 @@ from typing import Optional, Any
 from pydantic import BaseModel, Field, ConfigDict
 from ..model import MazeAdapter, GameModel, Direction
 from ..view import GameView
-from src.pac_man.model.entity import Ghost
+from src.pac_man.model.entity import Ghost, GhostState
 
 # ==========================================
 # CONSTANTS AND KEY MAPPINGS
@@ -74,12 +74,16 @@ class GameController:
         self.model.player.x = float(spawn_x + half_tile)
         self.model.player.y = float(spawn_y + half_tile)       
         
+        x_pixel = float(self.view.main_renderer.cell_to_pixel(coords[0], coords[1])[0] + half_tile)
+        y_pixel = float(self.view.main_renderer.cell_to_pixel(coords[0], coords[1])[1] + half_tile)
         self.model.ghosts = [
             Ghost(
-                x=float(self.view.main_renderer.cell_to_pixel(coords[0], coords[1])[0] + half_tile),
-                y=float(self.view.main_renderer.cell_to_pixel(coords[0], coords[1])[1] + half_tile),
+                x=x_pixel,
+                y=y_pixel,
                 color=c,
-                speed=100
+                speed=100,
+                state=GhostState.FRIGHTENED,
+                coords_spawn=(x_pixel, y_pixel)
             )
             for coords, c in zip(self.maze.ghost_spawns, COLORS)
         ]
