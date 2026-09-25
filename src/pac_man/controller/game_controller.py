@@ -70,9 +70,16 @@ class GameController:
             self.maze.player_spawn[0], self.maze.player_spawn[1]
         )
         self.model.size = int(self.view.main_renderer.tile_size * 0.5)
+        
         half_tile = self.view.main_renderer.tile_size // 2
-        self.model.player.x = float(spawn_x + half_tile)
-        self.model.player.y = float(spawn_y + half_tile)       
+        
+        x_pixel = float(spawn_x + half_tile)
+        y_pixel = float(spawn_y + half_tile)
+        self.model.player.x = x_pixel
+        self.model.player.y = y_pixel
+        
+        self.coords_spawn = (x_pixel, y_pixel)
+
         speed = 100
         for coords, c in zip(self.maze.ghost_spawns, COLORS):
             x_pixel = float(self.view.main_renderer.cell_to_pixel(coords[0], coords[1])[0] + half_tile)

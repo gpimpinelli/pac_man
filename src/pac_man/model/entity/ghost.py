@@ -13,7 +13,6 @@ class GhostState(Enum):
 
 
 class Ghost(Entity):
-    coords_spawn: tuple[int, int] = (0, 0)
     state: GhostState = GhostState.SCATTER
     last_decision_cell: tuple[int, int] = (-1, -1)
     
