@@ -21,7 +21,7 @@ def rgb_to_mlx(r: int, g: int, b: int) -> int:
 class GameView:
     """Handle window creation, rendering, and MLX graphical outputs."""
 
-    def __init__(self, config: Any, maze: MazeAdapter):
+    def __init__(self, config: Any, maze: MazeAdapter) -> None:
         """Initialize the MLX graphical environment using validated config."""
         self.config = config
         
@@ -65,11 +65,24 @@ class GameView:
             tile_size=10
         )
 
-    def clear(self):
+    def _background_menu(self, padding: int, w: int, h: int, color: int=0x222222) -> None:
+        new_w = w - (padding * 2)
+        new_h = h - (padding * 2)
+
+        self.draw_rect_fast(
+            coords=(padding, padding), 
+            w=new_w, 
+            h=new_h, 
+            color=color
+        )
+
+    def draw_game_over_menu(self) -> None:
+
+    def clear(self) -> None:
         """Wipe the screen buffer instantly using a pre-calculated byte array."""
         self.data[0:self.buffer_size] = self._bg_buffer
 
-    def draw_rect_fast(self, coords: tuple[int, int], w: int, h: int, color: int):
+    def draw_rect_fast(self, coords: tuple[int, int], w: int, h: int, color: int) -> None:
         """
         Draw a solid rectangle in the image buffer using direct byte manipulation.
         """
@@ -92,7 +105,7 @@ class GameView:
             self.data[start: start + row_len] = row_bytes
 
 
-    def position_in_minimap(self, x: int, y: int, size: int, color: int):
+    def position_in_minimap(self, x: int, y: int, size: int, color: int)  -> None:
         # Calculate the logical positoni in pixe of mini map
         logical_x = (x - self.main_renderer.offset_x) / self.main_renderer.tile_size
         logical_y = (y - self.main_renderer.offset_y) / self.main_renderer.tile_size
@@ -107,7 +120,7 @@ class GameView:
         self.minimap_renderer.draw_player(mini_px, mini_py, mini_size, color)
 
 
-    def render(self, model: GameModel):
+    def render(self, model: GameModel)  -> None:
         """
         Extract data from the Model and render it to the window.
         """
@@ -131,5 +144,12 @@ class GameView:
         for ghost in model.ghosts:
             self.position_in_minimap(ghost.x, ghost.y, model.size, ghost.color)
 
+        # Draw MENU
+        if model.player.is_dead:
+            self._background_menu(
+                padding=100, 
+                w=self.config.width, 
+                h=self.config.height,
+            )
         # mlx_put_image_to_window: Dump the completed off-screen image buffer onto the active window
         self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.img, 0, 0)

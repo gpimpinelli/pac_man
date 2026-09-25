@@ -50,7 +50,7 @@ class GameController:
         
         self.config = GameConfig(width=1640, height=1000, target_fps=60)
         self.last_time = time.perf_counter()
-        self.maze = MazeAdapter(seed=900, width=7, height=7)
+        self.maze = MazeAdapter(seed=900, width=15, height=15)
         
         # Pass the config block to the View
         self.view = GameView(self.config, self.maze)
@@ -81,7 +81,7 @@ class GameController:
         self.model.player.y = y_pixel
                 
             
-            # TODO if game is finished -> save score etc...
+        # TODO if game is finished -> save score etc...
         self.coords_spawn = (x_pixel, y_pixel)
 
         speed = 100
@@ -152,6 +152,7 @@ class GameController:
 
         self.model.update(dt)
         self.view.render(self.model)
+
         if self.maze.finish_game():
             # TODO
             # mandare al livello successivo.
