@@ -17,9 +17,9 @@ class Player(Entity):
 
     def update_intention(self, game_state) -> None:
         match self.state:
-            case ALIVE:
+            case PlayerState.ALIVE:
                 pass
-            case DYING:
+            case PlayerState.DYING:
                 pass
-            case DEAD:
+            case PlayerState.DEAD:
                 pass
