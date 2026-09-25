@@ -1,8 +1,7 @@
 import os
-import mlx
 import time
-from typing import Optional, Any
-from pydantic import BaseModel, Field, ConfigDict
+from src.pac_man.utils import cell_to_pixel
+from pydantic import BaseModel, Field
 from ..model import MazeAdapter, GameModel, Direction
 from ..view import GameView
 from src.pac_man.model.entity import Ghost, GhostState
@@ -51,7 +50,7 @@ class GameController:
         
         self.config = GameConfig(width=1640, height=1000, target_fps=60)
         self.last_time = time.perf_counter()
-        self.maze = MazeAdapter(seed=900)
+        self.maze = MazeAdapter(seed=900, width=5, height=5)
         
         # Pass the config block to the View
         self.view = GameView(self.config, self.maze)
@@ -66,8 +65,12 @@ class GameController:
             offset_y=self.view.main_renderer.offset_y,
         )
 
-        spawn_x, spawn_y = self.view.main_renderer.cell_to_pixel(
-            self.maze.player_spawn[0], self.maze.player_spawn[1]
+        spawn_x, spawn_y = cell_to_pixel(
+            self.maze.player_spawn[0],
+            self.maze.player_spawn[1],
+            self.view.main_renderer.offset_x,
+            self.view.main_renderer.offset_y,
+            self.view.main_renderer.tile_size,
         )
         self.model.size = int(self.view.main_renderer.tile_size * 0.5)
         
@@ -77,13 +80,16 @@ class GameController:
         y_pixel = float(spawn_y + half_tile)
         self.model.player.x = x_pixel
         self.model.player.y = y_pixel
-        
+                
+            
+            # TODO if game is finished -> save score etc...
         self.coords_spawn = (x_pixel, y_pixel)
 
         speed = 100
         for coords, c in zip(self.maze.ghost_spawns, COLORS):
-            x_pixel = float(self.view.main_renderer.cell_to_pixel(coords[0], coords[1])[0] + half_tile)
-            y_pixel = float(self.view.main_renderer.cell_to_pixel(coords[0], coords[1])[1] + half_tile)
+            coords_pixel: tuple[int, int] = cell_to_pixel(coords[0], coords[1], self.view.main_renderer.offset_x, self.view.main_renderer.offset_y, self.view.main_renderer.tile_size)
+            x_pixel = float(coords_pixel[0] + half_tile)
+            y_pixel = float(coords_pixel[1] + half_tile)
             self.model.ghosts.append(
                 Ghost(
                     x=x_pixel,
@@ -147,7 +153,14 @@ class GameController:
 
         self.model.update(dt)
         self.view.render(self.model)
-        
+        if self.maze.finish_game():
+            # TODO
+            # mandare al livello successivo.
+            # se finiti i livelli o vite
+            print("Hai vinto")
+            print(self.model.player.score)
+
+            return 0
         return 0
 
     def run(self):

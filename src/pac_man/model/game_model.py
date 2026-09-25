@@ -1,11 +1,9 @@
-import os
-import mlx
-import time
 from .entity import Direction, Entity
-from .maze_adapter import MazeAdapter
-from typing import Optional, Any
+from .maze_adapter import Cell
+from typing import Any
 from pydantic import BaseModel, Field, ConfigDict
-from .entity import Ghost, GhostState, Player, PlayerState
+from .entity import Ghost, GhostState, Player
+from src.pac_man.utils import pixel_to_cell
 
 
 # ==========================================
@@ -35,34 +33,40 @@ class GameModel(BaseModel):
     player: Player = Field(default_factory=Player)
     ghosts: list[Ghost] = Field(default_factory=list)
 
+    def _change_ghosts_state(self, new_state: GhostState) -> None:
+        for ghost in self.ghosts:
+            if new_state != ghost.state:
+                ghost.state = new_state
     
     def calc_rail(self, entity: Entity) -> tuple[int, int]:
-        col = int(entity.x - self.offset_x) // self.tile_size
-        row = int(entity.y - self.offset_y) // self.tile_size
+        col, row = pixel_to_cell(entity.x, entity.y, self.offset_x, self.offset_y, self.tile_size)
         return(
             self.offset_x + (col + 0.5) * self.tile_size,
             self.offset_y + (row + 0.5) * self.tile_size
         )
 
-    def check_and_eat_gum(self) -> None:
-        """Controlla la cella attuale e mangia la pallina se presente."""
-        col = int((self.player.x - self.offset_x) // self.tile_size)
-        row = int((self.player.y - self.offset_y) // self.tile_size)
+    def _check_and_eat_gum(self) -> None:
+        """Check the current cell and eat the pac gum"""
+        col, row = pixel_to_cell(self.player.x, self.player.y, self.offset_x, self.offset_y, self.tile_size)
         
-        c = self.maze.get_cell(col, row)
+        cell: Cell = self.maze.get_cell(col, row)
         
-        if c is None:
+        if cell is None:
             return
 
-        if c.has_pacgum:
-            c.remove_gum(is_super=False)
-            # TODO: Aggiungere punteggio base (es. self.score += 10)
-            pass
+        if cell.has_pacgum:
+            cell.remove_gum(is_super_gum=False)
+            # TODO insert score taken from config.json
+            self.player.score += 10
+            self.maze.total_pacgums -= 1
             
-        elif c.has_super_pacgum:
-            c.remove_gum(is_super=True)
-            # TODO: Aggiungere punteggio alto e attivare power-up
-            pass
+        elif cell.has_super_pacgum:
+            cell.remove_gum(is_super_gum=True)
+            # TODO insert score taken from config.json
+            self.player.score += 100
+            self.player.super_timer = 30.0
+            self._change_ghosts_state(GhostState.FRIGHTENED)
+            self.maze.total_pacgums -= 1
 
 
     def update(self, dt: float):
@@ -78,13 +82,23 @@ class GameModel(BaseModel):
         self._apply_movement(self.player, dt)
         self._handle_wall_collisions(self.player)
 
-        # TODO
-        # In futuro, per i fantasmi basterà fare questo!
         for ghost in self.ghosts:
             ghost.update_intention(self)
             self._handle_steering(ghost, dt)
             self._apply_movement(ghost, dt)
             self._handle_wall_collisions(ghost)
+
+        self._check_and_eat_gum()
+
+        if (
+            hasattr(self.player, 'super_timer')
+            and self.player.super_timer > 0
+        ):
+            self.player.super_timer -= dt
+
+            if self.player.super_timer <= 0:
+                self.player.super_timer = 0.0
+                self._change_ghosts_state(GhostState.CHASE)
 
     def _handle_steering(self, entity: Entity, dt: float):
         if entity.desired_dir and entity.desired_dir != entity.current_dir:
@@ -101,8 +115,7 @@ class GameModel(BaseModel):
                 entity.desired_dir = None
             else:
                 can_turn = False
-                col = int((entity.x - self.offset_x) // self.tile_size)
-                row = int((entity.y - self.offset_y) // self.tile_size)
+                col, row = pixel_to_cell(entity.x, entity.y, self.offset_x, self.offset_y, self.tile_size)
                 current_cell = self.maze.get_cell(col, row)
                 if current_cell and not current_cell.is_solid:
                     match entity.desired_dir:
@@ -143,8 +156,7 @@ class GameModel(BaseModel):
 
     def _handle_wall_collisions(self, entity: Entity):
         if entity.current_dir is not None:
-            col = int((entity.x - self.offset_x) // self.tile_size)
-            row = int((entity.y - self.offset_y) // self.tile_size)
+            col, row = pixel_to_cell(entity.x, entity.y, self.offset_x, self.offset_y, self.tile_size)
             cell = self.maze.get_cell(col, row)
  
             blocked = cell is None or cell.is_solid
@@ -175,5 +187,4 @@ class GameModel(BaseModel):
                 # Snap flush to the tile center/rail and stop.
                 if must_stop: 
                     entity.x, entity.y = self.calc_rail(entity)
-                    entity.current_dir = None
- 
+                    entity.current_dir = None 

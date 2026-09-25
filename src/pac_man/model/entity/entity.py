@@ -10,7 +10,6 @@ class Entity(BaseModel, ABC):
     speed: float = 125.0
     current_dir: Optional[Direction] = None
     desired_dir: Optional[Direction] = None
-    is_super: bool = False
     coords_spawn: tuple[int, int] = (0, 0)
     color: int = Field(default=0xFFFFFF)
     

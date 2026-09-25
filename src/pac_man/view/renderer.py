@@ -1,4 +1,5 @@
-from ..model import MazeAdapter, Cell
+from ..model import MazeAdapter
+from src.pac_man.utils import cell_to_pixel, center_in_pixel
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .game_view import GameView
@@ -31,24 +32,6 @@ class Renderer:
         # to center the maze in the screen
         self.offset_x = view_x + (screen_w - maze.width * self.tile_size) // 2
         self.offset_y = view_y + (screen_h - maze.height * self.tile_size) // 2
-    
-    def cell_to_pixel(self, cell_x: int, cell_y: int) -> tuple[int, int]:
-        return (
-            self.offset_x + cell_x * self.tile_size,
-            self.offset_y + cell_y * self.tile_size
-        )
-    
-    def center_in_pixel(
-        self,
-        cx: int,
-        cy: int,
-        tile_size: int,
-        size: int
-    ) -> tuple[int, int]:
-        return (
-            cx + (tile_size - size) // 2,
-            cy + (tile_size - size) // 2
-        )
 
     def draw_maze(self, maze: MazeAdapter) -> None:
         # Optimization: save the method's refernce in a local variable
@@ -60,7 +43,7 @@ class Renderer:
         
         for row in maze.grid:
             for cell in row:
-                cx, cy = self.cell_to_pixel(cell.x, cell.y)
+                cx, cy = cell_to_pixel(cell.x, cell.y, self.offset_x, self.offset_y, self.tile_size)
                 
                 if cell.is_solid:
                     draw_rect(
@@ -96,13 +79,13 @@ class Renderer:
                 if cell.has_pacgum:
                     # max(default, value -> 1/8 of the cell)
                     size = max(2, tile_size // 8)
-                    px, py = self.center_in_pixel(cx, cy, tile_size, size)
+                    px, py = center_in_pixel(cx, cy, tile_size, size)
                     draw_rect(px,py, size, size, COLOR_PACGUM)
                 
                 if cell.has_super_pacgum:
                     # max(default, value -> 1/8 of the cell)
                     size = max(4, tile_size // 6)
-                    px, py = self.center_in_pixel(cx, cy, tile_size, size)
+                    px, py = center_in_pixel(cx, cy, tile_size, size)
                     draw_rect(px,py, size, size, COLOR_SUPER_PACGUM)
 
 

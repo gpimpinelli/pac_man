@@ -4,15 +4,10 @@ Pac-Man clone using the MiniLibX (mlx) library.
 This module implements a basic Pac-Man style movement engine utilizing
 the Model-View-Controller (MVC) architectural pattern, enhanced with Pydantic.
 """
-
-import os
 import mlx
-import time
-from enum import Enum, auto
 from ..model import MazeAdapter, GameModel
 from .renderer import Renderer
-from typing import Optional, Any
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Any
 
 
 def rgb_to_mlx(r: int, g: int, b: int) -> int:

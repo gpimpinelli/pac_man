@@ -15,6 +15,11 @@ class Player(Entity):
     super_timer: float = 0.0
     state: PlayerState = PlayerState.ALIVE
 
+    @property
+    def is_super(self) -> bool:
+        """Calcola automaticamente lo stato booleano basandosi sul timer"""
+        return self.super_timer > 0.0
+
     def update_intention(self, game_state) -> None:
         match self.state:
             case PlayerState.ALIVE:
