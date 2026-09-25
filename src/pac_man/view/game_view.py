@@ -9,7 +9,6 @@ from ..model import MazeAdapter, GameModel
 from .renderer import Renderer
 from typing import Any
 
-
 def rgb_to_mlx(r: int, g: int, b: int) -> int:
     """Convert RGB (0-255) color channels to a 24-bit MLX integer color."""
     return (r << 16) | (g << 8) | b
@@ -65,18 +64,16 @@ class GameView:
             tile_size=10
         )
 
-    def _background_menu(self, padding: int, w: int, h: int, color: int=0x222222) -> None:
-        new_w = w - (padding * 2)
-        new_h = h - (padding * 2)
+    def _background_menu(self, padding: tuple[int, int], w: int, h: int, color: int=0x222222) -> None:
+        new_w = w - (padding[0] * 2)
+        new_h = h - (padding[1] * 2)
 
         self.draw_rect_fast(
-            coords=(padding, padding), 
+            coords=(padding[0], padding[1]), 
             w=new_w, 
             h=new_h, 
             color=color
         )
-
-    # def draw_game_over_menu(self) -> None:
 
     def clear(self) -> None:
         """Wipe the screen buffer instantly using a pre-calculated byte array."""
@@ -145,11 +142,8 @@ class GameView:
             self.position_in_minimap(ghost.x, ghost.y, model.size, ghost.color)
 
         # Draw MENU
-        # if model.player.is_dead:
-        #     self._background_menu(
-        #         padding=100, 
-        #         w=self.config.width, 
-        #         h=self.config.height,
-        #     )
+        if model.player.is_dead and model.player.lives < 0:
+            self._background_menu(padding=(500,200), w=self.config.width, h=self.config.height)
+
         # mlx_put_image_to_window: Dump the completed off-screen image buffer onto the active window
-        self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.img, 0, 0)
+        self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.img, 0, 0)   
