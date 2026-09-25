@@ -23,7 +23,14 @@ class Ghost(Entity):
             int((y - game_state.offset_y) // game_state.tile_size)
         )
 
-    def _evaluate_path(self, game_state, possible_dirs: list[Direction], cell_col: int, cell_row: int, short: bool = True):
+    def _evaluate_path(
+        self,
+        game_state,
+        possible_dirs: list[Direction],
+        cell_col: int,
+        cell_row: int,
+        short: bool = True
+    ) -> None:
         col, row = self._entity_position(self.x, self.y, game_state)
         best_dist = float("inf") if short else -1.0
         best_dir = possible_dirs[0]
@@ -37,7 +44,7 @@ class Ghost(Entity):
 
             dist = math.dist((test_col, test_row), (cell_col, cell_row))
 
-            if (short and dist < best_dist) or (not short and dist > best_dist):
+            if (short and dist < best_dist) or (not short and dist >= best_dist):
                 best_dist = dist
                 best_dir = d
 
@@ -88,23 +95,19 @@ class Ghost(Entity):
                     game_state.player.x, game_state.player.y, game_state
                 )
                 self._evaluate_path(game_state=game_state, possible_dirs=possible_dirs, cell_col=player_col, cell_row=player_row)
-                        
-                    
 
             case GhostState.FRIGHTENED:
                 player_col, player_row = self._entity_position(
                     game_state.player.x, game_state.player.y, game_state
                 )
                 self._evaluate_path(game_state=game_state, possible_dirs=possible_dirs, cell_col=player_col, cell_row=player_row, short=False)
-                        
 
             case GhostState.EATEN:
                 spawn_col, spawn_row = self._entity_position(
                     self.coords_spawn[0], self.coords_spawn[1], game_state
                 )
                 self._evaluate_path(game_state=game_state, possible_dirs=possible_dirs, cell_col=spawn_col, cell_row=spawn_row)
-            
-        # Fuori dal match block: viene eseguito per tutti gli stati
+
         self.last_decision_cell = (col, row)
 
         if self.current_dir is None:

@@ -73,20 +73,21 @@ class GameController:
         half_tile = self.view.main_renderer.tile_size // 2
         self.model.player.x = float(spawn_x + half_tile)
         self.model.player.y = float(spawn_y + half_tile)       
-        
-        x_pixel = float(self.view.main_renderer.cell_to_pixel(coords[0], coords[1])[0] + half_tile)
-        y_pixel = float(self.view.main_renderer.cell_to_pixel(coords[0], coords[1])[1] + half_tile)
-        self.model.ghosts = [
-            Ghost(
-                x=x_pixel,
-                y=y_pixel,
-                color=c,
-                speed=100,
-                state=GhostState.FRIGHTENED,
-                coords_spawn=(x_pixel, y_pixel)
+        speed = 100
+        for coords, c in zip(self.maze.ghost_spawns, COLORS):
+            x_pixel = float(self.view.main_renderer.cell_to_pixel(coords[0], coords[1])[0] + half_tile)
+            y_pixel = float(self.view.main_renderer.cell_to_pixel(coords[0], coords[1])[1] + half_tile)
+            self.model.ghosts.append(
+                Ghost(
+                    x=x_pixel,
+                    y=y_pixel,
+                    color=c,
+                    speed=speed,
+                    state=GhostState.CHASE,
+                    coords_spawn=(x_pixel, y_pixel),
+                )
             )
-            for coords, c in zip(self.maze.ghost_spawns, COLORS)
-        ]
+            speed += 2
         
         self.setup_hooks()
         
