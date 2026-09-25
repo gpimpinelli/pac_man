@@ -46,12 +46,23 @@ class GameModel(BaseModel):
             self.offset_y + (row + 0.5) * self.tile_size
         )
 
-    def _freeze_game(self) -> None:
-        self.player.speed = 0
-        self.player.current_dir = None
+    def _reset_game(self) -> None:
+        self._freeze_game()
+
+        self.player.x, self.player.y = self.player.coords_spawn
         for ghost in self.ghosts:
-            ghost.speed = 0.0
+            ghost.x, ghost.y = ghost.coords_spawn
+
+        self.started = False
+
+    def _freeze_game(self) -> None:
+        self.player.current_dir = None
+        self.player.desired_dir = None
+
+        for ghost in self.ghosts:
             ghost.current_dir = None
+            ghost.desired_dir = None
+
 
     def _check_entity_collisions(self) -> int:
         """Check if entitis collides"""
@@ -125,7 +136,7 @@ class GameModel(BaseModel):
         elif ghost_index != -1 and not self.player.is_super:
             self.player.lives -= 1
             self.player.state = PlayerState.DEAD
-            self._freeze_game()
+            self._reset_game()
 
         if (
             hasattr(self.player, 'super_timer')
@@ -140,7 +151,7 @@ class GameModel(BaseModel):
         # if self.player.state == PlayerState.DEAD:
         #     if self.player.lives > 0:
         #         self.player.state = PlayerState.ALIVE
-            self.started = False
+        #     self.started = False
 
     def _handle_steering(self, entity: Entity, dt: float):
         if entity.desired_dir and entity.desired_dir != entity.current_dir:

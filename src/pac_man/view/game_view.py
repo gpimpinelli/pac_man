@@ -76,7 +76,7 @@ class GameView:
             color=color
         )
 
-    def draw_game_over_menu(self) -> None:
+    # def draw_game_over_menu(self) -> None:
 
     def clear(self) -> None:
         """Wipe the screen buffer instantly using a pre-calculated byte array."""
@@ -145,11 +145,11 @@ class GameView:
             self.position_in_minimap(ghost.x, ghost.y, model.size, ghost.color)
 
         # Draw MENU
-        if model.player.is_dead:
-            self._background_menu(
-                padding=100, 
-                w=self.config.width, 
-                h=self.config.height,
-            )
+        # if model.player.is_dead:
+        #     self._background_menu(
+        #         padding=100, 
+        #         w=self.config.width, 
+        #         h=self.config.height,
+        #     )
         # mlx_put_image_to_window: Dump the completed off-screen image buffer onto the active window
         self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.img, 0, 0)

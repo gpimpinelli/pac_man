@@ -79,12 +79,10 @@ class GameController:
         y_pixel = float(spawn_y + half_tile)
         self.model.player.x = x_pixel
         self.model.player.y = y_pixel
-                
-            
-        # TODO if game is finished -> save score etc...
-        self.coords_spawn = (x_pixel, y_pixel)
+        self.model.player.coords_spawn = (x_pixel, y_pixel)
 
         speed = 100
+
         for coords, c in zip(self.maze.ghost_spawns, COLORS):
             coords_pixel: tuple[int, int] = cell_to_pixel(coords, (self.view.main_renderer.offset_x, self.view.main_renderer.offset_y), self.view.main_renderer.tile_size)
             x_pixel = float(coords_pixel[0] + half_tile)
@@ -100,7 +98,7 @@ class GameController:
                 )
             )
             speed += 2
-        
+
         self.setup_hooks()
         
     def setup_hooks(self):
