@@ -1,8 +1,9 @@
+import math
 from .entity import Direction, Entity
 from .maze_adapter import Cell
 from typing import Any
 from pydantic import BaseModel, Field, ConfigDict
-from .entity import Ghost, GhostState, Player
+from .entity import Ghost, GhostState, Player, PlayerState
 from src.pac_man.utils import pixel_to_cell
 
 
@@ -44,6 +45,21 @@ class GameModel(BaseModel):
             self.offset_x + (col + 0.5) * self.tile_size,
             self.offset_y + (row + 0.5) * self.tile_size
         )
+
+    def _check_entity_collisions(self) -> int:
+        """Check if entitis collides"""
+        hitbox_radius = self.tile_size * 0.25
+
+        i = 0
+        while i < len(self.ghosts):
+            dist = math.dist(
+                (self.player.x, self.player.y),
+                (self.ghosts[i].x, self.ghosts[i].y)
+            )
+            if dist <= hitbox_radius:
+                return (i)
+            i += 1
+        return -1
 
     def _check_and_eat_gum(self) -> None:
         """Check the current cell and eat the pac gum"""
@@ -90,6 +106,21 @@ class GameModel(BaseModel):
 
         self._check_and_eat_gum()
 
+        ghost_index = self._check_entity_collisions()
+        if (
+            ghost_index != -1
+            and self.player.is_super
+            and not self.ghosts[ghost_index].is_already_eaten
+        ):
+            self.player.score += 200
+            self.ghosts[ghost_index].state = GhostState.EATEN
+        elif ghost_index != -1 and not self.player.is_super:
+            self.player.lives -= 1
+            # TODO mettere animazione e gestirla
+            self.player.state = PlayerState.DEAD
+
+        print(self.player.state)
+
         if (
             hasattr(self.player, 'super_timer')
             and self.player.super_timer > 0
@@ -99,6 +130,14 @@ class GameModel(BaseModel):
             if self.player.super_timer <= 0:
                 self.player.super_timer = 0.0
                 self._change_ghosts_state(GhostState.CHASE)
+
+        if self.player.state == PlayerState.DEAD:
+            if self.player.lives > 0:
+                # TODO reset game
+                pass
+            else:
+                # TODO end game
+                pass
 
     def _handle_steering(self, entity: Entity, dt: float):
         if entity.desired_dir and entity.desired_dir != entity.current_dir:

@@ -16,6 +16,11 @@ class Ghost(Entity):
     state: GhostState = GhostState.SCATTER
     last_decision_cell: tuple[int, int] = (-1, -1)
 
+    @property
+    def is_already_eaten(self) -> bool:
+        """Check if the ghost have state = GhostState.EATEN"""
+        return self.state == GhostState.EATEN
+
     def _evaluate_path(
         self,
         game_state,
@@ -43,7 +48,6 @@ class Ghost(Entity):
                 best_dir = d
 
         self.desired_dir = best_dir
-                        
 
     def update_intention(self, game_state) -> None:
         col, row = pixel_to_cell((self.x, self.y), (game_state.offset_x, game_state.offset_y), game_state.tile_size)
@@ -100,7 +104,6 @@ class Ghost(Entity):
 
         if self.current_dir is None:
             self.current_dir = self.desired_dir
-
 
 if __name__ == "__main__":
     ghost = Ghost()

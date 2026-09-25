@@ -5,8 +5,10 @@ from .direction import Direction
 
 
 class Entity(BaseModel, ABC):
+    # x and y are in pixel
     x: float = 0.0
     y: float = 0.0
+
     speed: float = 125.0
     current_dir: Optional[Direction] = None
     desired_dir: Optional[Direction] = None

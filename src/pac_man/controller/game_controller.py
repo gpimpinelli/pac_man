@@ -50,7 +50,7 @@ class GameController:
         
         self.config = GameConfig(width=1640, height=1000, target_fps=60)
         self.last_time = time.perf_counter()
-        self.maze = MazeAdapter(seed=900, width=5, height=5)
+        self.maze = MazeAdapter(seed=900, width=7, height=7)
         
         # Pass the config block to the View
         self.view = GameView(self.config, self.maze)
