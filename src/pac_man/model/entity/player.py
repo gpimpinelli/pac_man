@@ -9,7 +9,7 @@ class PlayerState(Enum):
 
 
 class Player(Entity):
-    lives: int = 2
+    lives: int =0
     score: int = 0
     multiplicator: int = 1
     super_timer: float = 0.0

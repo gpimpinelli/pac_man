@@ -5,6 +5,7 @@ This module implements a basic Pac-Man style movement engine utilizing
 the Model-View-Controller (MVC) architectural pattern, enhanced with Pydantic.
 """
 import mlx
+from dataclasses import dataclass
 from ..model import MazeAdapter, GameModel
 from .renderer import Renderer
 from typing import Any
@@ -13,6 +14,15 @@ def rgb_to_mlx(r: int, g: int, b: int) -> int:
     """Convert RGB (0-255) color channels to a 24-bit MLX integer color."""
     return (r << 16) | (g << 8) | b
 
+
+@dataclass
+class MenuButton:
+    name: str
+    x: int
+    y: int
+    w: int
+    h: int
+    is_hovered: bool = False
 
 # ==========================================
 # 2. VIEW (Graphics Engine and Rendering)
@@ -44,15 +54,15 @@ class GameView:
         # Background buffer cache (Night Blue)
         bg_bytes = bytes([0x22, 0x05, 0x05, 0xFF])
         self._bg_buffer = bg_bytes * (self.buffer_size // self.bytes_per_pixel)
-
-        # --- GESTIONE RENDERER (La View è proprietaria della grafica) ---
         
         # 1. Renderer Principale (a tutto schermo)
         self.main_renderer = Renderer(self, maze)
 
-        # 2. Renderer Minimappa (in alto a destra)
+        # Renderer Minimap
         minimap_size = 200
         padding = 50
+
+        self.active_buttons: list[MenuButton] = []
         
         self.minimap_renderer = Renderer(
             self, 
@@ -74,6 +84,71 @@ class GameView:
             h=new_h, 
             color=color
         )
+
+    def draw_game_over_text(self) -> None:
+        text_color = 0xFFFFFF
+        
+        for btn in self.active_buttons:
+            text_x = btn.x + (btn.w // 2) - 25
+            text_y = btn.y + (btn.h // 2) + 5
+            
+            self.m.mlx_string_put(
+                self.mlx_ptr, 
+                self.win_ptr, 
+                text_x, 
+                text_y, 
+                text_color, 
+                btn.name
+            )
+
+
+    def draw_menu(self, w: int, h: int) -> None:        
+        # menu panel
+        padding_menu: tuple[int, int] = (w // 4, h // 4)
+        self._background_menu(padding_menu, w, h, 0xFFB8FF)
+        
+        menu_x = padding_menu[0]
+        menu_y = padding_menu[1]
+        
+        menu_w = w - (menu_x * 2)
+        menu_h = h - (menu_y * 2)
+        
+        # general rule for button
+        num_buttons = 3
+        btn_w = 200
+        btn_h = 50
+        gap = 20
+        btn_color = 0x555555
+        button_name = ("START", "SETTINGS", "EXIT")
+        
+        # calculate for center of button
+        total_block_height = (num_buttons * btn_h) + ((num_buttons - 1) * gap)
+        
+        # caluclate start_x for draw button
+        start_x = menu_x + ((menu_w - btn_w) // 2)
+        
+        # caluclate start_x for draw button
+        start_y = menu_y + ((menu_h - total_block_height) // 2)
+        
+        # draw button
+        for i in range(num_buttons):
+            current_y = start_y + (i * (btn_h + gap))
+            
+            self.draw_rect_fast(
+                coords=(start_x, current_y), 
+                w=btn_w, 
+                h=btn_h, 
+                color=btn_color
+            )
+
+            new_botton = MenuButton(
+                name= button_name[i], 
+                x=start_x, 
+                y=current_y, 
+                w=btn_w, 
+                h=btn_h
+            )
+            self.active_buttons.append(new_botton)
 
     def clear(self) -> None:
         """Wipe the screen buffer instantly using a pre-calculated byte array."""
@@ -143,7 +218,10 @@ class GameView:
 
         # Draw MENU
         if model.player.is_dead and model.player.lives < 0:
-            self._background_menu(padding=(500,200), w=self.config.width, h=self.config.height)
+            self.draw_menu(w=self.config.width, h=self.config.height)
 
         # mlx_put_image_to_window: Dump the completed off-screen image buffer onto the active window
-        self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.img, 0, 0)   
+        self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.img, 0, 0)
+
+        if model.player.is_dead and model.player.lives < 0:
+            self.draw_game_over_text()   
