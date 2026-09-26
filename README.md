@@ -19,7 +19,7 @@ surface game maker
 
 # TODO
 ## 1) enum with GameState
-## 2) drow botton  (restart, settings exit)
+## 2) find the sprites for name of button  (restart, settings exit)
 ## 3) enum for check if click botton
 ## 4) insert lives and score bottom the minimap
 ## 5) cheat mode (1 no wall collision for player(just the wall inside), 2 super gum infinito, 3) infinity lives 4) to be able to shoot)
