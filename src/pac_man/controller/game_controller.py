@@ -2,6 +2,7 @@ import os
 import time
 from src.pac_man.utils import cell_to_pixel
 from pydantic import BaseModel, Field
+from enum import Enum, auto
 from ..model import MazeAdapter, GameModel, Direction
 from ..view import GameView
 from src.pac_man.model.entity import Ghost, GhostState
@@ -38,6 +39,13 @@ class GameConfig(BaseModel):
     title: str = Field(default="Pac-Man 42", min_length=1, description="Window title.")
     target_fps: int = Field(default=60, gt=0, le=240, description="Target frames per second.")
 
+
+class GameState(Enum):
+    START_MENU = auto()
+    PLAYING = auto()
+    DEATH_PAUSE = auto()  # Sostituisce la logica del timer + started=False
+    GAME_OVER = auto()
+    SETTINGS = auto()
 
 # ==========================================
 # 3. CONTROLLER (Input, Loop, and Integration)
