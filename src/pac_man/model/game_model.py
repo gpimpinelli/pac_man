@@ -3,10 +3,11 @@ from typing import Any
 from enum import Enum, auto
 from .maze_adapter import Cell
 from .entity import Direction, Entity
-from src.pac_man.utils import pixel_to_cell
-from pydantic import BaseModel, Field, ConfigDict
+from src.pac_man.utils import pixel_to_cell, cell_to_pixel
+from pydantic import BaseModel, model_validator, Field, ConfigDict
 from .entity import Ghost, GhostState, Player, PlayerState
 
+COLORS = [0xFF0000, 0xFFB8FF, 0x00FFFF, 0xFFB852]
 
 class GameState(Enum):
     START_MENU = auto()
@@ -31,17 +32,56 @@ class GameModel(BaseModel):
     
     maze: Any
 
-    started: bool = Field(default=False)
+    state: GameState = GameState.START_MENU
 
     # Disable assignment validation for performance during the 60fps loop
     model_config = ConfigDict(validate_assignment=False)
     
     tile_size: int = Field(default=32)
-    offset_x: int = Field(ge=0)
-    offset_y: int = Field(ge=0)
 
     player: Player = Field(default_factory=Player)
     ghosts: list[Ghost] = Field(default_factory=list)
+
+    selected_button_index: int = 0
+
+    @model_validator(mode='after')
+    def create_entity(self):
+        spawn_x, spawn_y = cell_to_pixel(
+            self.maze.player_spawn,
+            (0, 0),
+            self.tile_size,
+        )
+
+        half_tile = self.tile_size // 2
+        
+        x_pixel = float(spawn_x + half_tile)
+        y_pixel = float(spawn_y + half_tile)
+        self.player.x = x_pixel
+        self.player.y = y_pixel
+        self.player.coords_spawn = (x_pixel, y_pixel)
+
+
+        speed = 100
+
+        for coords, c in zip(self.maze.ghost_spawns, COLORS):
+            coords_pixel: tuple[int, int] = cell_to_pixel(
+                coords, (0, 0), self.tile_size
+                )
+            x_pixel = float(coords_pixel[0] + half_tile)
+            y_pixel = float(coords_pixel[1] + half_tile)
+            self.ghosts.append(
+                Ghost(
+                    x=x_pixel,
+                    y=y_pixel,
+                    color=c,
+                    speed=speed,
+                    state=GhostState.CHASE,
+                    coords_spawn=(x_pixel, y_pixel),
+                )
+            )
+            speed += 2
+
+        return self
 
     def _change_ghosts_state(self, new_state: GhostState) -> None:
         for ghost in self.ghosts:
@@ -49,10 +89,10 @@ class GameModel(BaseModel):
                 ghost.state = new_state
     
     def calc_rail(self, entity: Entity) -> tuple[int, int]:
-        col, row = pixel_to_cell((entity.x, entity.y), (self.offset_x, self.offset_y), self.tile_size)
+        col, row = pixel_to_cell((entity.x, entity.y), (0, 0), self.tile_size)
         return(
-            self.offset_x + (col + 0.5) * self.tile_size,
-            self.offset_y + (row + 0.5) * self.tile_size
+            (col + 0.5) * self.tile_size,
+            (row + 0.5) * self.tile_size
         )
 
     def _reset_game(self) -> None:
@@ -62,7 +102,7 @@ class GameModel(BaseModel):
         for ghost in self.ghosts:
             ghost.x, ghost.y = ghost.coords_spawn
 
-        self.started = False
+        self.state = GameState.DEATH_PAUSE
 
     def _freeze_game(self) -> None:
         self.player.current_dir = None
@@ -90,7 +130,9 @@ class GameModel(BaseModel):
 
     def _check_and_eat_gum(self) -> None:
         """Check the current cell and eat the pac gum"""
-        col, row = pixel_to_cell((self.player.x, self.player.y), (self.offset_x, self.offset_y), self.tile_size)
+        col, row = pixel_to_cell(
+            (self.player.x, self.player.y), (0, 0), self.tile_size
+        )
         
         cell: Cell = self.maze.get_cell(col, row)
         
@@ -118,7 +160,10 @@ class GameModel(BaseModel):
         Args:
             dt: Delta time elapsed since the last frame, in seconds.
         """
-        if not self.started:
+        if self.state != GameState.PLAYING:
+            return
+        
+        if self.state == GameState.GAME_OVER:
             return
 
         self._handle_steering(self.player, dt)
@@ -145,7 +190,11 @@ class GameModel(BaseModel):
         elif ghost_index != -1 and not self.player.is_super:
             self.player.lives -= 1
             self.player.state = PlayerState.DEAD
-            self._reset_game()
+
+            if not self.player.has_lives:
+                self.state = GameState.GAME_OVER
+            else:
+                self._reset_game()
 
         if (
             hasattr(self.player, 'super_timer')
@@ -157,22 +206,28 @@ class GameModel(BaseModel):
                 self.player.super_timer = 0.0
                 self._change_ghosts_state(GhostState.CHASE)
 
+
     def _handle_steering(self, entity: Entity, dt: float):
         if entity.desired_dir and entity.desired_dir != entity.current_dir:
             is_opposite = (
-                (entity.current_dir == Direction.LEFT and entity.desired_dir == Direction.RIGHT) or
-                (entity.current_dir == Direction.RIGHT and entity.desired_dir == Direction.LEFT) or
-                (entity.current_dir == Direction.UP and entity.desired_dir == Direction.DOWN) or
-                (entity.current_dir == Direction.DOWN and entity.desired_dir == Direction.UP)
+                (entity.current_dir == Direction.LEFT and
+                    entity.desired_dir == Direction.RIGHT) or
+                (entity.current_dir == Direction.RIGHT and
+                    entity.desired_dir == Direction.LEFT) or
+                (entity.current_dir == Direction.UP and
+                    entity.desired_dir == Direction.DOWN) or
+                (entity.current_dir == Direction.DOWN and
+                    entity.desired_dir == Direction.UP)
             )
 
             if is_opposite and isinstance(entity, Player):
-                # Inverti istantaneamente senza calcolare il centro
                 entity.current_dir = entity.desired_dir
                 entity.desired_dir = None
             else:
                 can_turn = False
-                col, row = pixel_to_cell((entity.x, entity.y), (self.offset_x, self.offset_y), self.tile_size)
+                col, row = pixel_to_cell(
+                    (entity.x, entity.y), (0, 0), self.tile_size
+                )
                 current_cell = self.maze.get_cell(col, row)
                 if current_cell and not current_cell.is_solid:
                     match entity.desired_dir:
@@ -187,14 +242,18 @@ class GameModel(BaseModel):
             
                 rail_x, rail_y = self.calc_rail(entity)
                 if can_turn:
-                    if entity.current_dir in (Direction.LEFT, Direction.RIGHT):
+                    if (
+                        entity.current_dir in (Direction.LEFT, Direction.RIGHT)
+                    ):
                         dist_from_center = abs(entity.x - rail_x)
                     else:
                         dist_from_center = abs(entity.y - rail_y)
                     # ================== Avoid Snap Jitter ==================
                     # Calculate the exact distance traveled this frame
                     tolerance = entity.speed * dt
-                    if entity.current_dir is None or dist_from_center <= tolerance:
+                    if (
+                        entity.current_dir is None or dist_from_center <= tolerance
+                    ):
                         entity.x = rail_x
                         entity.y = rail_y
                         entity.current_dir = entity.desired_dir
@@ -213,7 +272,9 @@ class GameModel(BaseModel):
 
     def _handle_wall_collisions(self, entity: Entity):
         if entity.current_dir is not None:
-            col, row = pixel_to_cell((entity.x, entity.y), (self.offset_x, self.offset_y), self.tile_size)
+            col, row = pixel_to_cell(
+                (entity.x, entity.y), (0, 0), self.tile_size
+            )
             cell = self.maze.get_cell(col, row)
  
             blocked = cell is None or cell.is_solid

@@ -2,7 +2,6 @@ import os
 import time
 from ..view import GameView
 from pydantic import BaseModel, Field
-from src.pac_man.utils import cell_to_pixel
 from ..model import MazeAdapter, GameModel, Direction, GameState
 from src.pac_man.model.entity import Ghost, GhostState, Player, PlayerState
 
@@ -10,7 +9,6 @@ from src.pac_man.model.entity import Ghost, GhostState, Player, PlayerState
 # CONSTANTS AND KEY MAPPINGS
 # ==========================================
 KEY_ESC = 65307
-COLORS = [0xFF0000, 0xFFB8FF, 0x00FFFF, 0xFFB852]
 EVENT_KEY_PRESS = 2
 EVENT_DESTROY = 17
 EVENT_CLIENT_MESSAGE = 33
@@ -33,10 +31,18 @@ KEYS_MAP = {
 # ==========================================
 class GameConfig(BaseModel):
     """Centralized, validated configuration for the game."""
-    width: int = Field(default=1024, gt=0, description="Window width in pixels.")
-    height: int = Field(default=764, gt=0, description="Window height in pixels.")
-    title: str = Field(default="Pac-Man 42", min_length=1, description="Window title.")
-    target_fps: int = Field(default=60, gt=0, le=240, description="Target frames per second.")
+    width: int = Field(
+        default=1024, gt=0, description="Window width in pixels."
+    )
+    height: int = Field(
+        default=764, gt=0, description="Window height in pixels."
+    )
+    title: str = Field(
+        default="Pac-Man 42", min_length=1, description="Window title."
+    )
+    target_fps: int = Field(
+        default=60, gt=0, le=240, description="Target frames per second."
+    )
 
 # ==========================================
 # 3. CONTROLLER (Input, Loop, and Integration)
@@ -49,10 +55,9 @@ class GameController:
         
         self.config = GameConfig(width=1640, height=1000, target_fps=60)
         self.last_time = time.perf_counter()
-        self.maze = MazeAdapter(seed=900, width=7, height=7)
+        self.maze = MazeAdapter(seed=900, width=21, height=21)
         
-        # Pass the config block to the View
-        self.view = GameView(self.config, self.maze)
+        self.view = GameView(self.config)
 
         # Instantiate Model dynamically from config parameters
         self.model = GameModel(
@@ -60,48 +65,11 @@ class GameController:
             screen_height=self.config.height,
             maze=self.maze,
             tile_size=self.view.main_renderer.tile_size,
-            offset_x=self.view.main_renderer.offset_x,
-            offset_y=self.view.main_renderer.offset_y,
         )
-        
-        # MENU var for navigation
-        self.current_state: GameState = GameState.START_MENU
-        self.selected_button_index: int = 0
 
-        spawn_x, spawn_y = cell_to_pixel(
-            self.maze.player_spawn,
-            (self.view.main_renderer.offset_x,
-            self.view.main_renderer.offset_y),
-            self.view.main_renderer.tile_size,
-        )
+
         self.model.size = int(self.view.main_renderer.tile_size * 0.5)
         
-        half_tile = self.view.main_renderer.tile_size // 2
-        
-        x_pixel = float(spawn_x + half_tile)
-        y_pixel = float(spawn_y + half_tile)
-        self.model.player.x = x_pixel
-        self.model.player.y = y_pixel
-        self.model.player.coords_spawn = (x_pixel, y_pixel)
-
-        speed = 100
-
-        for coords, c in zip(self.maze.ghost_spawns, COLORS):
-            coords_pixel: tuple[int, int] = cell_to_pixel(coords, (self.view.main_renderer.offset_x, self.view.main_renderer.offset_y), self.view.main_renderer.tile_size)
-            x_pixel = float(coords_pixel[0] + half_tile)
-            y_pixel = float(coords_pixel[1] + half_tile)
-            self.model.ghosts.append(
-                Ghost(
-                    x=x_pixel,
-                    y=y_pixel,
-                    color=c,
-                    speed=speed,
-                    state=GhostState.CHASE,
-                    coords_spawn=(x_pixel, y_pixel),
-                )
-            )
-            speed += 2
-
         self.setup_hooks()
         
     def setup_hooks(self):
@@ -111,12 +79,22 @@ class GameController:
         
         # mlx_hook: Bind X11 events
         m.mlx_hook(win, EVENT_DESTROY, 0, self.close_game, None)
-        m.mlx_hook(win, EVENT_DESTROY, STRUCTURE_NOTIFY_MASK, self.close_game, None)
+        m.mlx_hook(
+            win, EVENT_DESTROY, STRUCTURE_NOTIFY_MASK, self.close_game, None
+        )
         m.mlx_hook(win, EVENT_CLIENT_MESSAGE, 0, self.close_game, None)
-        m.mlx_hook(win, EVENT_CLIENT_MESSAGE, STRUCTURE_NOTIFY_MASK, self.close_game, None)
+        m.mlx_hook(
+            win,
+            EVENT_CLIENT_MESSAGE,
+            STRUCTURE_NOTIFY_MASK,
+            self.close_game,
+            None
+        )
         
         # mlx_hook: Bind keyboard press events
-        m.mlx_hook(win, EVENT_KEY_PRESS, KEY_PRESS_MASK, self.on_key_press, None)
+        m.mlx_hook(
+            win, EVENT_KEY_PRESS, KEY_PRESS_MASK, self.on_key_press, None
+        )
         
         # mlx_loop_hook: Main function for MLX infinite loop
         m.mlx_loop_hook(self.view.mlx_ptr, self.update_game, None)
@@ -129,12 +107,12 @@ class GameController:
 
     def _handle_menu_selection(self) -> None:
         """Execute the action corresponding to the selected menu button."""
-        match self.selected_button_index:
+        match self.model.selected_button_index:
             case 0:
                 self.model._reset_game()
                 self.model.player.lives = 3
                 self.model.player.state = PlayerState.ALIVE
-                self.current_state = GameState.PLAYING
+                self.model.state = GameState.DEATH_PAUSE
             case 1:
                 # TODO lead to highscores page
                 print("Open Highscores...")
@@ -151,26 +129,33 @@ class GameController:
         if keycode in (KEY_ESC, 27, ord('q'), ord('Q')):
             self.close_game()
             
-        if self.current_state == GameState.PLAYING:
-            action = KEYS_MAP.get(keycode)
+        action = KEYS_MAP.get(keycode)
+
+        if self.model.state == GameState.PLAYING:
             if action:
                 self.model.player.desired_dir = action
-                if not self.model.started:
-                    self.model.started = True
-                    self.model.player.state = PlayerState.ALIVE
-                    self.last_time = time.perf_counter()
-        elif self.current_state in (
-            GameState.GAME_OVER, GameState.START_MENU):
-            action = KEYS_MAP.get(keycode)
+                
+        elif self.model.state == GameState.DEATH_PAUSE:
+            if action:
+                self.model.player.desired_dir = action
+                self.model.player.state = PlayerState.ALIVE
+                self.model.state = GameState.PLAYING
+                self.last_time = time.perf_counter()
+                
+        elif self.model.state in (GameState.GAME_OVER, GameState.START_MENU):
+            num_buttons = 4
+
             if action == Direction.UP:
-                self.selected_button_index = (
-                    self.selected_button_index - 1) % 4
+                self.model.selected_button_index = (
+                    (self.model.selected_button_index - 1) % num_buttons
+                )
             elif action == Direction.DOWN:
-                self.selected_button_index = (
-                    self.selected_button_index + 1) % 4
-            # Confirm selection (Enter or Space)
+                self.model.selected_button_index = (
+                    (self.model.selected_button_index + 1) % num_buttons
+                )
             elif keycode in (65293, 13, 32):
                 self._handle_menu_selection()
+                
         return 0
 
     def update_game(self, *args):
@@ -189,14 +174,7 @@ class GameController:
         self.last_time = current_time
 
         # ====================================================================
-        if self.model.player.is_dead and self.model.player.lives < 0:
-            self.current_state = GameState.GAME_OVER
-        
-        # Sync view and controller
-        self.view.current_state = self.current_state
-        self.view.selected_button_index = self.selected_button_index
-
-        if self.current_state == GameState.PLAYING:
+        if self.model.state == GameState.PLAYING:
             # model.update(dt) UPDATE the game only in PLAYING state
             self.model.update(dt)
 
@@ -213,7 +191,10 @@ class GameController:
 
     def run(self):
         """Launch the game engine and start the event loop."""
-        print(f"{self.config.title} Engine Running. Premi frecce o WASD per muoverti. ESC per uscire.")
+        print(
+            f"{self.config.title} Engine Running. "
+            "Premi frecce o WASD per muoverti. ESC per uscire."
+        )
         self.view.m.mlx_loop(self.view.mlx_ptr)
 
 # ==========================================

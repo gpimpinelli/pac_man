@@ -30,7 +30,7 @@ class MenuButton:
 class GameView:
     """Handle window creation, rendering, and MLX graphical outputs."""
 
-    def __init__(self, config: Any, maze: MazeAdapter) -> None:
+    def __init__(self, config: Any) -> None:
         """Initialize the MLX graphical environment using validated config."""
         self.config = config
         
@@ -40,11 +40,20 @@ class GameView:
         self.mlx_ptr = self.m.mlx_init()
         
         # mlx_new_window: Create a new window on the screen
-        self.win_ptr = self.m.mlx_new_window(self.mlx_ptr, self.config.width, self.config.height, self.config.title)
+        self.win_ptr = self.m.mlx_new_window(
+            self.mlx_ptr,
+            self.config.width,
+            self.config.height,
+            self.config.title
+        )
         
         # mlx_new_image: Create an off-screen image buffer in memory
-        self.img = self.m.mlx_new_image(self.mlx_ptr, self.config.width, self.config.height)
-        
+        self.img = self.m.mlx_new_image(
+            self.mlx_ptr,
+            self.config.width,
+            self.config.height
+        )
+
         # mlx_get_data_addr: Retrieve the memory address of the image
         self.data, self.bfp, self.size_line, _ = self.m.mlx_get_data_addr(self.img)
         
@@ -56,28 +65,27 @@ class GameView:
         self._bg_buffer = bg_bytes * (self.buffer_size // self.bytes_per_pixel)
         
         # 1. Renderer Principale (a tutto schermo)
-        self.main_renderer = Renderer(self, maze)
+        self.main_renderer = Renderer(self)
+
+        self.active_buttons: list[MenuButton] = []
 
         # Renderer Minimap
         minimap_size = 200
         padding = 50
+
         self.minimap_renderer = Renderer(
             self, 
-            maze, 
-            view_x=self.config.width - minimap_size - padding, 
-            view_y=padding, 
+            view_x=padding,
+            view_y=padding,
             view_w=minimap_size, 
             view_h=minimap_size,
             tile_size=10
         )
-
-        # MENU button and navigation
-        self.active_buttons: list[MenuButton] = []
-        self.current_state = GameState.START_MENU
-        self.selected_button_index = 0
         
 
-    def _background_menu(self, padding: tuple[int, int], w: int, h: int, color: int=0x222222) -> None:
+    def _background_menu(
+        self, padding: tuple[int, int], w: int, h: int, color: int=0x222222
+    ) -> None:
         new_w = w - (padding[0] * 2)
         new_h = h - (padding[1] * 2)
 
@@ -105,7 +113,7 @@ class GameView:
                 btn.name
             )
 
-    def draw_menu(self, w: int, h: int) -> None:        
+    def draw_menu(self, w: int, h: int, selected_index: int) -> None: 
         # Reset the list each frame before adding buttons
         self.active_buttons.clear()
         # menu panel
@@ -140,7 +148,7 @@ class GameView:
             current_y = start_y + (i * (btn_h + gap))
             
             # Highlight selected button
-            if i == self.selected_button_index:
+            if i == selected_index:
                 color = 0x888888
             else:
                 color = btn_color
@@ -161,10 +169,13 @@ class GameView:
             self.active_buttons.append(new_botton)
 
     def clear(self) -> None:
-        """Wipe the screen buffer instantly using a pre-calculated byte array."""
+        """Wipe the screen buffer instantly 
+         using a pre-calculated byte array."""
         self.data[0:self.buffer_size] = self._bg_buffer
 
-    def draw_rect_fast(self, coords: tuple[int, int], w: int, h: int, color: int) -> None:
+    def draw_rect_fast(
+        self, coords: tuple[int, int], w: int, h: int, color: int
+    ) -> None:
         """
         Draw a solid rectangle in the image buffer using direct byte manipulation.
         """
@@ -173,7 +184,9 @@ class GameView:
         r_ch = (color >> 16) & 0xFF
 
         x0, y0 = max(0, coords[0]), max(0, coords[1])
-        x1, y1 = min(coords[0] + w, self.config.width), min(coords[1] + h, self.config.height)
+        x1, y1 = min(
+            coords[0] + w, self.config.width), min(coords[1] + h, self.config.height
+        )
         actual_w = x1 - x0
         
         if actual_w <= 0 or y1 <= y0:
@@ -187,14 +200,24 @@ class GameView:
             self.data[start: start + row_len] = row_bytes
 
 
-    def position_in_minimap(self, x: int, y: int, size: int, color: int)  -> None:
+    def position_in_minimap(
+        self,
+        x: int,
+        y: int,
+        size: int,
+        color: int
+    )  -> None:
         # Calculate the logical positoni in pixe of mini map
-        logical_x = (x - self.main_renderer.offset_x) / self.main_renderer.tile_size
-        logical_y = (y - self.main_renderer.offset_y) / self.main_renderer.tile_size
+        logical_x = x / self.main_renderer.tile_size
+        logical_y = y / self.main_renderer.tile_size
 
         # Convert the logical position to scaled pixels on the mini-map
-        mini_px = self.minimap_renderer.offset_x + (logical_x * self.minimap_renderer.tile_size)
-        mini_py = self.minimap_renderer.offset_y + (logical_y * self.minimap_renderer.tile_size)
+        mini_px = (
+            self.minimap_renderer.offset_x + (logical_x * self.minimap_renderer.tile_size)
+            )
+        mini_py = (
+            self.minimap_renderer.offset_y + (logical_y * self.minimap_renderer.tile_size)
+        )
 
         # Calculate the player’s size proportionally
         ratio = self.minimap_renderer.tile_size / self.main_renderer.tile_size
@@ -206,7 +229,9 @@ class GameView:
         """
         Extract data from the Model and render it to the window.
         """
-        # mlx_sync: Force X11 to finish rdraw_player(self, x: float, y: float, size: int, color: int)eading the image buffer before we overwrite it
+        # mlx_sync: Force X11 to finish 
+        # draw_player(self, x: float, y: float, size: int, color: int)
+        # reading the image buffer before we overwrite it
         self.m.mlx_sync(self.mlx_ptr, mlx.Mlx.SYNC_IMAGE_WRITABLE, self.img)
         self.clear()
         
@@ -214,26 +239,43 @@ class GameView:
         self.main_renderer.draw_maze(model.maze)
 
         # Draw the player
-        self.main_renderer.draw_player(model.player.x, model.player.y, model.size, model.player.color)
+        self.main_renderer.draw_player(
+            model.player.x + self.main_renderer.offset_x,
+            model.player.y + self.main_renderer.offset_y,
+            model.size, 
+            model.player.color
+        )
         for ghost in model.ghosts:
-            self.main_renderer.draw_player(ghost.x, ghost.y, model.size, ghost.color)
+            self.main_renderer.draw_player(
+                ghost.x + self.main_renderer.offset_x,
+                ghost.y + self.main_renderer.offset_y,
+                model.size,
+                ghost.color
+            )
 
         # Draw the mini map
         self.minimap_renderer.draw_maze(model.maze)
 
         # Move the player to the new coordinates
-        self.position_in_minimap(model.player.x, model.player.y, model.size, model.player.color)
+        self.position_in_minimap(
+            model.player.x, model.player.y, model.size, model.player.color
+        )
         for ghost in model.ghosts:
             self.position_in_minimap(ghost.x, ghost.y, model.size, ghost.color)
 
         # Draw MENU
-        if self.current_state in (GameState.START_MENU, GameState.GAME_OVER):
-            self.draw_menu(w=self.config.width, h=self.config.height)
+        if model.state in (GameState.START_MENU, GameState.GAME_OVER):
+            self.draw_menu(
+                w=self.config.width,
+                h=self.config.height,
+                selected_index=model.selected_button_index
+            )
 
-        # mlx_put_image_to_window: Dump the completed off-screen image buffer onto the active window
+        # mlx_put_image_to_window: 
+        # Dump the completed off-screen image buffer onto the active window
         self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.img, 0, 0)
 
         # Draw text on top of buttons
-        if self.current_state in (GameState.START_MENU, GameState.GAME_OVER):
+        if model.state in (GameState.START_MENU, GameState.GAME_OVER):
             self.draw_button()
             
