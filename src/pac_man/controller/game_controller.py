@@ -1,11 +1,10 @@
 import os
 import time
-from src.pac_man.utils import cell_to_pixel
-from pydantic import BaseModel, Field
-from enum import Enum, auto
-from ..model import MazeAdapter, GameModel, Direction
 from ..view import GameView
-from src.pac_man.model.entity import Ghost, GhostState
+from pydantic import BaseModel, Field
+from src.pac_man.utils import cell_to_pixel
+from ..model import MazeAdapter, GameModel, Direction, GameState
+from src.pac_man.model.entity import Ghost, GhostState, Player, PlayerState
 
 # ==========================================
 # CONSTANTS AND KEY MAPPINGS
@@ -39,14 +38,6 @@ class GameConfig(BaseModel):
     title: str = Field(default="Pac-Man 42", min_length=1, description="Window title.")
     target_fps: int = Field(default=60, gt=0, le=240, description="Target frames per second.")
 
-
-class GameState(Enum):
-    START_MENU = auto()
-    PLAYING = auto()
-    DEATH_PAUSE = auto()  # Sostituisce la logica del timer + started=False
-    GAME_OVER = auto()
-    SETTINGS = auto()
-
 # ==========================================
 # 3. CONTROLLER (Input, Loop, and Integration)
 # ==========================================
@@ -58,7 +49,7 @@ class GameController:
         
         self.config = GameConfig(width=1640, height=1000, target_fps=60)
         self.last_time = time.perf_counter()
-        self.maze = MazeAdapter(seed=900, width=15, height=15)
+        self.maze = MazeAdapter(seed=900, width=7, height=7)
         
         # Pass the config block to the View
         self.view = GameView(self.config, self.maze)
@@ -72,6 +63,10 @@ class GameController:
             offset_x=self.view.main_renderer.offset_x,
             offset_y=self.view.main_renderer.offset_y,
         )
+        
+        # MENU var for navigation
+        self.current_state: GameState = GameState.START_MENU
+        self.selected_button_index: int = 0
 
         spawn_x, spawn_y = cell_to_pixel(
             self.maze.player_spawn,
@@ -132,21 +127,58 @@ class GameController:
         self.view.m.mlx_destroy_window(self.view.mlx_ptr, self.view.win_ptr)
         os._exit(0)
 
+    def _handle_menu_selection(self) -> None:
+        """Execute the action corresponding to the selected menu button."""
+        match self.selected_button_index:
+            case 0:
+                self.model._reset_game()
+                self.model.player.lives = 3
+                self.model.player.state = PlayerState.ALIVE
+                self.current_state = GameState.PLAYING
+            case 1:
+                # TODO lead to highscores page
+                print("Open Highscores...")
+            case 2:
+                # TODO lead to settings page
+                print("Open Settings")
+            case 3:
+                self.close_game()
+            case _:
+                pass
+
     def on_key_press(self, keycode: int, *args):
         """Process keyboard input and update the model state."""
         if keycode in (KEY_ESC, 27, ord('q'), ord('Q')):
             self.close_game()
             
-        action = KEYS_MAP.get(keycode)
-        if action:
-            self.model.player.desired_dir = action
-            if not self.model.started:
-                self.model.started = True
-                self.last_time = time.perf_counter()
+        if self.current_state == GameState.PLAYING:
+            action = KEYS_MAP.get(keycode)
+            if action:
+                self.model.player.desired_dir = action
+                if not self.model.started:
+                    self.model.started = True
+                    self.model.player.state = PlayerState.ALIVE
+                    self.last_time = time.perf_counter()
+        elif self.current_state in (
+            GameState.GAME_OVER, GameState.START_MENU):
+            action = KEYS_MAP.get(keycode)
+            if action == Direction.UP:
+                self.selected_button_index = (
+                    self.selected_button_index - 1) % 4
+            elif action == Direction.DOWN:
+                self.selected_button_index = (
+                    self.selected_button_index + 1) % 4
+            # Confirm selection (Enter or Space)
+            elif keycode in (65293, 13, 32):
+                self._handle_menu_selection()
         return 0
 
     def update_game(self, *args):
-        """Manage the frame rate, trigger physics updates, and execute rendering."""
+        """
+        update_game:
+            1) Manage the frame rate,
+            2) Trigger physics updates and Execute rendering.
+        """
         current_time = time.perf_counter()
         dt = current_time - self.last_time
         frame_duration = 1.0 / self.config.target_fps
@@ -156,17 +188,27 @@ class GameController:
 
         self.last_time = current_time
 
-        self.model.update(dt)
+        # ====================================================================
+        if self.model.player.is_dead and self.model.player.lives < 0:
+            self.current_state = GameState.GAME_OVER
+        
+        # Sync view and controller
+        self.view.current_state = self.current_state
+        self.view.selected_button_index = self.selected_button_index
+
+        if self.current_state == GameState.PLAYING:
+            # model.update(dt) UPDATE the game only in PLAYING state
+            self.model.update(dt)
+
+            if self.maze.finish_pacgums():
+                # TODO
+                # mandare al livello successivo.
+                # se finiti i livelli o vite
+                return 0
+        # ====================================================================
+
+        # Always render the screen
         self.view.render(self.model)
-
-        if self.maze.finish_game():
-            # TODO
-            # mandare al livello successivo.
-            # se finiti i livelli o vite
-            print("Hai vinto")
-            print(self.model.player.score)
-
-            return 0
         return 0
 
     def run(self):

@@ -101,7 +101,7 @@ class MazeAdapter:
 
         self.generate()
 
-    def finish_game(self) -> bool:
+    def finish_pacgums(self) -> bool:
         return self.total_pacgums == 0
 
     def generate(self) -> None:

@@ -1,10 +1,19 @@
 import math
-from .entity import Direction, Entity
-from .maze_adapter import Cell
 from typing import Any
+from enum import Enum, auto
+from .maze_adapter import Cell
+from .entity import Direction, Entity
+from src.pac_man.utils import pixel_to_cell
 from pydantic import BaseModel, Field, ConfigDict
 from .entity import Ghost, GhostState, Player, PlayerState
-from src.pac_man.utils import pixel_to_cell
+
+
+class GameState(Enum):
+    START_MENU = auto()
+    PLAYING = auto()
+    DEATH_PAUSE = auto()  # Sostituisce la logica del timer + started=False
+    GAME_OVER = auto()
+    SETTINGS = auto()
 
 
 # ==========================================
@@ -147,11 +156,6 @@ class GameModel(BaseModel):
             if self.player.super_timer <= 0:
                 self.player.super_timer = 0.0
                 self._change_ghosts_state(GhostState.CHASE)
-
-        # if self.player.state == PlayerState.DEAD:
-        #     if self.player.lives > 0:
-        #         self.player.state = PlayerState.ALIVE
-        #     self.started = False
 
     def _handle_steering(self, entity: Entity, dt: float):
         if entity.desired_dir and entity.desired_dir != entity.current_dir:

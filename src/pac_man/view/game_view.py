@@ -5,10 +5,10 @@ This module implements a basic Pac-Man style movement engine utilizing
 the Model-View-Controller (MVC) architectural pattern, enhanced with Pydantic.
 """
 import mlx
-from dataclasses import dataclass
-from ..model import MazeAdapter, GameModel
-from .renderer import Renderer
 from typing import Any
+from .renderer import Renderer
+from dataclasses import dataclass
+from ..model import MazeAdapter, GameModel, GameState
 
 def rgb_to_mlx(r: int, g: int, b: int) -> int:
     """Convert RGB (0-255) color channels to a 24-bit MLX integer color."""
@@ -61,9 +61,6 @@ class GameView:
         # Renderer Minimap
         minimap_size = 200
         padding = 50
-
-        self.active_buttons: list[MenuButton] = []
-        
         self.minimap_renderer = Renderer(
             self, 
             maze, 
@@ -73,6 +70,12 @@ class GameView:
             view_h=minimap_size,
             tile_size=10
         )
+
+        # MENU button and navigation
+        self.active_buttons: list[MenuButton] = []
+        self.current_state = GameState.START_MENU
+        self.selected_button_index = 0
+        
 
     def _background_menu(self, padding: tuple[int, int], w: int, h: int, color: int=0x222222) -> None:
         new_w = w - (padding[0] * 2)
@@ -85,12 +88,13 @@ class GameView:
             color=color
         )
 
-    def draw_game_over_text(self) -> None:
+    def draw_button(self) -> None:
         text_color = 0xFFFFFF
         
         for btn in self.active_buttons:
-            text_x = btn.x + (btn.w // 2) - 25
-            text_y = btn.y + (btn.h // 2) + 5
+            text_width = len(btn.name) * 10
+            text_x = btn.x + ((btn.w - text_width) // 2)
+            text_y = btn.y + (btn.h // 2) - 10
             
             self.m.mlx_string_put(
                 self.mlx_ptr, 
@@ -101,8 +105,9 @@ class GameView:
                 btn.name
             )
 
-
     def draw_menu(self, w: int, h: int) -> None:        
+        # Reset the list each frame before adding buttons
+        self.active_buttons.clear()
         # menu panel
         padding_menu: tuple[int, int] = (w // 4, h // 4)
         self._background_menu(padding_menu, w, h, 0xFFB8FF)
@@ -114,12 +119,12 @@ class GameView:
         menu_h = h - (menu_y * 2)
         
         # general rule for button
-        num_buttons = 3
+        num_buttons = 4
         btn_w = 200
         btn_h = 50
         gap = 20
         btn_color = 0x555555
-        button_name = ("START", "SETTINGS", "EXIT")
+        button_name = ("START", "HIGHSCORES", "SETTINGS", "EXIT")
         
         # calculate for center of button
         total_block_height = (num_buttons * btn_h) + ((num_buttons - 1) * gap)
@@ -134,13 +139,18 @@ class GameView:
         for i in range(num_buttons):
             current_y = start_y + (i * (btn_h + gap))
             
+            # Highlight selected button
+            if i == self.selected_button_index:
+                color = 0x888888
+            else:
+                color = btn_color
+
             self.draw_rect_fast(
                 coords=(start_x, current_y), 
                 w=btn_w, 
                 h=btn_h, 
-                color=btn_color
+                color=color
             )
-
             new_botton = MenuButton(
                 name= button_name[i], 
                 x=start_x, 
@@ -217,11 +227,13 @@ class GameView:
             self.position_in_minimap(ghost.x, ghost.y, model.size, ghost.color)
 
         # Draw MENU
-        if model.player.is_dead and model.player.lives < 0:
+        if self.current_state in (GameState.START_MENU, GameState.GAME_OVER):
             self.draw_menu(w=self.config.width, h=self.config.height)
 
         # mlx_put_image_to_window: Dump the completed off-screen image buffer onto the active window
         self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.img, 0, 0)
 
-        if model.player.is_dead and model.player.lives < 0:
-            self.draw_game_over_text()   
+        # Draw text on top of buttons
+        if self.current_state in (GameState.START_MENU, GameState.GAME_OVER):
+            self.draw_button()
+            
