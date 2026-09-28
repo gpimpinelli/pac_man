@@ -163,8 +163,11 @@ class GameController:
             elif keycode == 65288:
                 self.model.name_input = self.model.name_input[:-1]
                 
-        elif self.model.state in (GameState.GAME_OVER, GameState.START_MENU):
-            num_buttons = 4
+        elif self.model.state in (
+            GameState.GAME_OVER,
+            GameState.START_MENU,
+        ):
+            num_buttons = len(self.view.menu_buttons)
 
             if action == Direction.UP:
                 self.model.selected_button_index = (
@@ -176,7 +179,22 @@ class GameController:
                 )
             elif keycode in (65293, 13, 32):
                 self._handle_menu_selection()
-                
+
+        elif self.model.state == GameState.ENTER_NAME:
+            num_buttons = len(self.view.name_buttons)            
+            if action == Direction.UP:
+                self.model.selected_button_index = (
+                    (self.model.selected_button_index - 1) % num_buttons
+                )
+            elif action == Direction.DOWN:
+                self.model.selected_button_index = (
+                    (self.model.selected_button_index + 1) % num_buttons
+                )
+            elif keycode in (65293, 13, 32):
+                self._handle_menu_selection()
+
+
+         
         return 0
 
     def update_game(self, *args):

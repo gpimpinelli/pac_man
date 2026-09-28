@@ -67,7 +67,8 @@ class GameView:
         # 1. Renderer Principale (a tutto schermo)
         self.main_renderer = Renderer(self)
 
-        self.active_buttons: list[MenuButton] = []
+        self.menu_buttons: list[MenuButton] = []
+        self.name_buttons: list[MenuButton] = []
 
         # Renderer Minimap
         minimap_size = 200
@@ -89,16 +90,16 @@ class GameView:
         new_h = h - (padding[1] * 2)
 
         self.draw_rect_fast(
-            coords=(padding[0], padding[1]), 
-            w=new_w, 
+            coords=(padding[0], padding[1]),
+            w=new_w,
             h=new_h, 
             color=color
         )
 
-    def draw_button(self) -> None:
+    def draw_button(self, is_enter_name: bool = False) -> None:
         text_color = 0xFFFFFF
-        
-        for btn in self.active_buttons:
+        lst_buttons = self.name_buttons if is_enter_name else self.menu_buttons
+        for btn in lst_buttons:
             text_width = len(btn.name) * 10
             text_x = btn.x + ((btn.w - text_width) // 2)
             text_y = btn.y + (btn.h // 2) - 10
@@ -121,7 +122,7 @@ class GameView:
             is_enter_name: bool = False
     ) -> None: 
         # Reset the list each frame before adding buttons
-        self.active_buttons.clear()
+        self.menu_buttons.clear()
         # menu panel
         padding_menu: tuple[int, int] = (w // 4, h // 4)
         self._background_menu(padding_menu, w, h, 0xFFB8FF)
@@ -152,7 +153,7 @@ class GameView:
         for i in range(num_buttons):
             current_y = start_y + (i * (btn_h + gap))
 
-            if is_enter_name:
+            if is_enter_name and i == selected_index:
                 color = 0xFFFFFF
             # Highlight selected button
             elif i == selected_index:
@@ -166,14 +167,17 @@ class GameView:
                 h=btn_h, 
                 color=color
             )
-            new_botton = MenuButton(
+            new_button = MenuButton(
                 name = button_lst[i],
                 x=start_x, 
                 y=current_y, 
                 w=btn_w, 
                 h=btn_h
             )
-            self.active_buttons.append(new_botton)
+            if is_enter_name:
+                self.name_buttons.append(new_button)
+            else:
+                self.menu_buttons.append(new_button)
 
     def clear(self) -> None:
         """Wipe the screen buffer instantly 
@@ -275,7 +279,7 @@ class GameView:
                 w=self.config.width,
                 h=self.config.height,
                 selected_index=model.selected_button_index,
-                button_lst = ["", "Enter Name"],
+                button_lst = ["", "ENTER"],
                 is_enter_name = True,
             )
 
@@ -295,3 +299,6 @@ class GameView:
         # Draw text on top of buttons
         if model.state in (GameState.START_MENU, GameState.GAME_OVER):
             self.draw_button()
+
+        if model.state == GameState.ENTER_NAME:
+            self.draw_button(True)
