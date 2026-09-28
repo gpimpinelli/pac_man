@@ -2,10 +2,10 @@ import math
 from typing import Any
 from enum import Enum, auto
 from .maze_adapter import Cell
-from .entity import Direction, Entity
+from .highscores import HighscoreManager
 from src.pac_man.utils import pixel_to_cell, cell_to_pixel
-from pydantic import BaseModel, model_validator, Field, ConfigDict
-from .entity import Ghost, GhostState, Player, PlayerState
+from pydantic import BaseModel, ConfigDict, model_validator, Field
+from .entity import Ghost, GhostState, Player, PlayerState, Direction, Entity
 
 COLORS = [0xFF0000, 0xFFB8FF, 0x00FFFF, 0xFFB852]
 
@@ -43,6 +43,9 @@ class GameModel(BaseModel):
     ghosts: list[Ghost] = Field(default_factory=list)
 
     selected_button_index: int = 0
+
+    # HIGHSCORE
+    highscore_manager: HighscoreManager = Field(default_factory=HighscoreManager)
 
     @model_validator(mode='after')
     def create_entity(self):
@@ -193,8 +196,23 @@ class GameModel(BaseModel):
 
             if not self.player.has_lives:
                 self.state = GameState.GAME_OVER
+                self.highscore_manager.is_new_highscore = (
+                    self.model.highscore_manager.is_highscore(
+                        self.model.player.score
+                    )
+                )
+                print(self.highscore_manager.scores)
             else:
                 self._reset_game()
+
+        # ====================================================================
+        elif self.state == GameState.PLAYING:
+            if self.maze.finish_pacgums():
+                # TODO
+                # mandare al livello successivo.
+                # se finiti i livelli o vite
+                return 0
+        # ====================================================================
 
         if (
             hasattr(self.player, 'super_timer')
@@ -205,7 +223,6 @@ class GameModel(BaseModel):
             if self.player.super_timer <= 0:
                 self.player.super_timer = 0.0
                 self._change_ghosts_state(GhostState.CHASE)
-
 
     def _handle_steering(self, entity: Entity, dt: float):
         if entity.desired_dir and entity.desired_dir != entity.current_dir:

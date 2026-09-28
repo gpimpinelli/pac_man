@@ -3,7 +3,7 @@ import time
 from ..view import GameView
 from pydantic import BaseModel, Field
 from ..model import MazeAdapter, GameModel, Direction, GameState
-from src.pac_man.model.entity import Ghost, GhostState, Player, PlayerState
+from src.pac_man.model.entity import PlayerState
 
 # ==========================================
 # CONSTANTS AND KEY MAPPINGS
@@ -55,7 +55,7 @@ class GameController:
         
         self.config = GameConfig(width=1640, height=1000, target_fps=60)
         self.last_time = time.perf_counter()
-        self.maze = MazeAdapter(seed=900, width=21, height=21)
+        self.maze = MazeAdapter(seed=900, width=7, height=7)
         
         self.view = GameView(self.config)
 
@@ -66,7 +66,6 @@ class GameController:
             maze=self.maze,
             tile_size=self.view.main_renderer.tile_size,
         )
-
 
         self.model.size = int(self.view.main_renderer.tile_size * 0.5)
         
@@ -141,6 +140,28 @@ class GameController:
                 self.model.player.state = PlayerState.ALIVE
                 self.model.state = GameState.PLAYING
                 self.last_time = time.perf_counter()
+
+        # getattr(obj, variable, default)
+        elif (
+            self.model.state == GameState.GAME_OVER
+            and getattr(
+                self.model.highscore_manager, 'is_new_highscore', False
+            )
+        ):
+            if keycode in (65293, 13):
+                self.model.highscore_manager.add_score(
+                    self.model.name_input,
+                    self.model.player.score
+                )
+            elif ((97 <= keycode <= 122)
+                  or (48 <= keycode <= 57)
+                  or keycode == 32
+            ):
+                if len(self.model.name_input) < 10:
+                    char = chr(keycode).upper()
+                    self.model.name_input += char
+            elif keycode == 65288:
+                self.model.name_input = self.model.name_input[:-1]
                 
         elif self.model.state in (GameState.GAME_OVER, GameState.START_MENU):
             num_buttons = 4
@@ -173,17 +194,12 @@ class GameController:
 
         self.last_time = current_time
 
-        # ====================================================================
-        if self.model.state == GameState.PLAYING:
-            # model.update(dt) UPDATE the game only in PLAYING state
-            self.model.update(dt)
+        # model.update(dt) UPDATE the game only in PLAYING state
+        self.model.update(dt)
 
-            if self.maze.finish_pacgums():
-                # TODO
-                # mandare al livello successivo.
-                # se finiti i livelli o vite
-                return 0
-        # ====================================================================
+        if (self.model.player.state == PlayerState.DEAD
+                and self.model.player.has_lives):
+            pass
 
         # Always render the screen
         self.view.render(self.model)

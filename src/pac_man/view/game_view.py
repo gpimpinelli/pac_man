@@ -81,7 +81,6 @@ class GameView:
             view_h=minimap_size,
             tile_size=10
         )
-        
 
     def _background_menu(
         self, padding: tuple[int, int], w: int, h: int, color: int=0x222222

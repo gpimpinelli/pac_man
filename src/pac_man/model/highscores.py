@@ -1,19 +1,25 @@
-from pathlib import Path
 import json
+from pathlib import Path
+from pydantic import BaseModel, model_validator
 
 
-class HighscoreManager:
-    """It manages the persistency and validation of the record's ranking"""
-
-    def __init__(self, filepath: str | Path = "highscores.json") -> None:
-        """
+class HighscoreManager(BaseModel):
+    """It manages the persistency and validation of the record's ranking
+ 
         Initialization of the record's manager and existent scores loader
         Args:
             filepath (str | Path): Path to the scores JSON file.
         """
-        self.filepath: Path = Path(filepath)
-        self.scores: list[dict[str, object]] = []
+    filepath: Path = Path("highscore.json")
+    scores: list[dict[str, object]] = []
+
+    is_new_highscore: bool = False
+    name_input: str = ""
+
+    @model_validator(mode='after')
+    def init_load(self) -> "HighscoreManager":
         self.load()
+        return self
 
     def load(self) -> None:
         if not self.filepath.is_file():

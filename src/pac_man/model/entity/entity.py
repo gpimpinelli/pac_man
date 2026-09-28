@@ -1,7 +1,7 @@
-from pydantic import BaseModel, Field, ConfigDict
-from abc import ABC, abstractmethod
 from typing import Optional
 from .direction import Direction
+from abc import ABC, abstractmethod
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class Entity(BaseModel, ABC):
