@@ -4,27 +4,8 @@ from ..view import GameView
 from pydantic import BaseModel, Field
 from ..model import MazeAdapter, GameModel, Direction, GameState
 from src.pac_man.model.entity import PlayerState
+from enum import IntEnum
 
-# ==========================================
-# CONSTANTS AND KEY MAPPINGS
-# ==========================================
-KEY_ESC = 65307
-EVENT_KEY_PRESS = 2
-EVENT_DESTROY = 17
-EVENT_CLIENT_MESSAGE = 33
-KEY_PRESS_MASK = 1 << 0
-STRUCTURE_NOTIFY_MASK = 1 << 17
-
-KEYS_MAP = {
-    65362: Direction.UP,    # Up Arrow
-    119:   Direction.UP,    # w
-    65364: Direction.DOWN,  # Down Arrow
-    115:   Direction.DOWN,  # s
-    65361: Direction.LEFT,  # Left Arrow
-    97:    Direction.LEFT,  # a
-    65363: Direction.RIGHT, # Right Arrow
-    100:   Direction.RIGHT  # d
-}
 
 # ==========================================
 # CONFIGURATION
@@ -49,6 +30,44 @@ class GameConfig(BaseModel):
 # ==========================================
 class GameController:
     """Orchestrate the game loop, user inputs, and component integration."""
+    # ==========================================
+    # CONSTANTS AND KEY MAPPINGS
+    # ==========================================
+    
+    class Key(IntEnum):
+        ESC = 65307
+        ENTER = 65293
+        BACKSPACE = 65288
+        SPACE = 32
+        UP = 65362
+        DOWN = 65364
+        LEFT = 65361
+        RIGHT = 65363
+        W = 119
+        S = 115
+        A = 97
+        D = 100
+
+    class EventType(IntEnum):
+        KEY_PRESS = 2
+        DESTROY = 17
+        CLIENT_MESSAGE = 33
+
+    class EventMask(IntEnum):
+        KEY_PRESS = 1 << 0
+        STRUCTURE_NOTIFY = 1 << 17
+
+    KEYS_MAP = {
+        Key.UP: Direction.UP,
+        Key.W: Direction.UP,
+        Key.DOWN: Direction.DOWN,
+        Key.S: Direction.DOWN,
+        Key.LEFT: Direction.LEFT,
+        Key.A: Direction.LEFT,
+        Key.RIGHT: Direction.RIGHT,
+        Key.D: Direction.RIGHT,
+    }
+
 
     def __init__(self):
         """Initialize the Controller using Pydantic configurations."""
@@ -77,22 +96,22 @@ class GameController:
         win = self.view.win_ptr
         
         # mlx_hook: Bind X11 events
-        m.mlx_hook(win, EVENT_DESTROY, 0, self.close_game, None)
+        m.mlx_hook(win, self.EventType.DESTROY, 0, self.close_game, None)
         m.mlx_hook(
-            win, EVENT_DESTROY, STRUCTURE_NOTIFY_MASK, self.close_game, None
+            win, self.EventType.DESTROY, self.EventMask.STRUCTURE_NOTIFY, self.close_game, None
         )
-        m.mlx_hook(win, EVENT_CLIENT_MESSAGE, 0, self.close_game, None)
+        m.mlx_hook(win, self.EventType.CLIENT_MESSAGE, 0, self.close_game, None)
         m.mlx_hook(
             win,
-            EVENT_CLIENT_MESSAGE,
-            STRUCTURE_NOTIFY_MASK,
+            self.EventType.CLIENT_MESSAGE,
+            self.EventMask.STRUCTURE_NOTIFY,
             self.close_game,
             None
         )
         
         # mlx_hook: Bind keyboard press events
         m.mlx_hook(
-            win, EVENT_KEY_PRESS, KEY_PRESS_MASK, self.on_key_press, None
+            win, self.EventType.KEY_PRESS, self.EventMask.KEY_PRESS, self.on_key_press, None
         )
         
         # mlx_loop_hook: Main function for MLX infinite loop
@@ -141,10 +160,10 @@ class GameController:
 
 
     def on_key_press(self, keycode: int, *args):
-        if keycode in (KEY_ESC, 27, ord('q'), ord('Q')):
+        if keycode in (self.Key.ESC, 27, ord('q'), ord('Q')):
             self.close_game()
             
-        action = KEYS_MAP.get(keycode)
+        action = self.KEYS_MAP.get(keycode)
 
         if self.model.state == GameState.PLAYING:
             if action:
