@@ -28,6 +28,9 @@ class Player(Entity):
     def has_lives(self) -> bool:
         return self.lives > 0
 
+    def remove_super(self) -> None:
+        self.super_timer = 0.0
+
     def update_intention(self, game_state) -> None:
         match self.state:
             case PlayerState.ALIVE:

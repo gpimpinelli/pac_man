@@ -143,7 +143,7 @@ class GameController:
 
         # getattr(obj, variable, default)
         elif (
-            self.model.state == GameState.GAME_OVER
+            self.model.state == GameState.ENTER_NAME
             and getattr(
                 self.model.highscore_manager, 'is_new_highscore', False
             )

@@ -1,7 +1,8 @@
 import math
+import random
 from typing import Any
 from enum import Enum, auto
-from .maze_adapter import Cell
+from .maze_adapter import Cell, MazeAdapter
 from .highscores import HighscoreManager
 from src.pac_man.utils import pixel_to_cell, cell_to_pixel
 from pydantic import BaseModel, ConfigDict, model_validator, Field
@@ -12,9 +13,10 @@ COLORS = [0xFF0000, 0xFFB8FF, 0x00FFFF, 0xFFB852]
 class GameState(Enum):
     START_MENU = auto()
     PLAYING = auto()
-    DEATH_PAUSE = auto()  # Sostituisce la logica del timer + started=False
+    DEATH_PAUSE = auto()
     GAME_OVER = auto()
     SETTINGS = auto()
+    ENTER_NAME = auto()
 
 
 # ==========================================
@@ -34,9 +36,6 @@ class GameModel(BaseModel):
 
     state: GameState = GameState.START_MENU
 
-    # Disable assignment validation for performance during the 60fps loop
-    model_config = ConfigDict(validate_assignment=False)
-    
     tile_size: int = Field(default=32)
 
     player: Player = Field(default_factory=Player)
@@ -46,6 +45,11 @@ class GameModel(BaseModel):
 
     # HIGHSCORE
     highscore_manager: HighscoreManager = Field(default_factory=HighscoreManager)
+
+    # Disable assignment validation for performance during the 60fps loop
+    model_config = ConfigDict(validate_assignment=False)
+    
+
 
     @model_validator(mode='after')
     def create_entity(self):
@@ -62,7 +66,6 @@ class GameModel(BaseModel):
         self.player.x = x_pixel
         self.player.y = y_pixel
         self.player.coords_spawn = (x_pixel, y_pixel)
-
 
         speed = 100
 
@@ -83,20 +86,49 @@ class GameModel(BaseModel):
                 )
             )
             speed += 2
-
         return self
+
+    def _spawn_entities(self, entity: Entity, coords: tuple[int, int]):
+        half_tile = self.tile_size // 2
+        if isinstance(entity, Player):
+            coords_pixel = cell_to_pixel(
+                coords,
+                (0, 0),
+                self.tile_size,
+            )
+        else:
+            coords_pixel: tuple[int, int] = cell_to_pixel(
+                coords, (0, 0), self.tile_size
+            )
+        entity.x = float(coords_pixel[0] + half_tile)
+        entity.y = float(coords_pixel[1] + half_tile)
+        entity.coords_spawn = (entity.x, entity.y)
 
     def _change_ghosts_state(self, new_state: GhostState) -> None:
         for ghost in self.ghosts:
             if new_state != ghost.state:
                 ghost.state = new_state
     
-    def calc_rail(self, entity: Entity) -> tuple[int, int]:
+    def _calc_rail(self, entity: Entity) -> tuple[int, int]:
         col, row = pixel_to_cell((entity.x, entity.y), (0, 0), self.tile_size)
         return(
             (col + 0.5) * self.tile_size,
             (row + 0.5) * self.tile_size
         )
+
+    def remove_super(self):
+        self.player.remove_super()
+        self._change_ghosts_state(GhostState.CHASE)
+
+
+    def _load_level(self, w:int, h: int, is_first: bool = False) -> None:
+        seed = 42 if is_first else random.randint(0, 100000)
+        self._reset_game()
+        self.maze = MazeAdapter(width=w, height=h)
+        self._spawn_entities(self.player, self.maze.player_spawn)
+        self.remove_super()
+        for i in range(len(self.ghosts)):
+            self._spawn_entities(self.ghosts[i], self.maze.ghost_spawns[i])
 
     def _reset_game(self) -> None:
         self._freeze_game()
@@ -163,6 +195,7 @@ class GameModel(BaseModel):
         Args:
             dt: Delta time elapsed since the last frame, in seconds.
         """
+
         if self.state != GameState.PLAYING:
             return
         
@@ -195,23 +228,27 @@ class GameModel(BaseModel):
             self.player.state = PlayerState.DEAD
 
             if not self.player.has_lives:
-                self.state = GameState.GAME_OVER
+                self.state = GameState.ENTER_NAME
                 self.highscore_manager.is_new_highscore = (
-                    self.model.highscore_manager.is_highscore(
-                        self.model.player.score
+                    self.highscore_manager.is_highscore(
+                        self.player.score
                     )
                 )
-                print(self.highscore_manager.scores)
             else:
                 self._reset_game()
+        if self.state == GameState.START_MENU:
+            print("gipimpin")
+            self._load_level(w=7, h=7)
 
         # ====================================================================
-        elif self.state == GameState.PLAYING:
-            if self.maze.finish_pacgums():
-                # TODO
-                # mandare al livello successivo.
-                # se finiti i livelli o vite
-                return 0
+        elif self.maze.finish_pacgums():
+            self.state = GameState.DEATH_PAUSE
+            self._load_level(9, 9)
+            print(self.ghosts[0].state)
+            # TODO
+            # mandare al livello successivo.
+            # se finiti i livelli o vite
+            return 0
         # ====================================================================
 
         if (
@@ -257,7 +294,7 @@ class GameModel(BaseModel):
                         case Direction.RIGHT:
                             can_turn = not current_cell.has_wall_east
             
-                rail_x, rail_y = self.calc_rail(entity)
+                rail_x, rail_y = self._calc_rail(entity)
                 if can_turn:
                     if (
                         entity.current_dir in (Direction.LEFT, Direction.RIGHT)
@@ -307,7 +344,7 @@ class GameModel(BaseModel):
                         blocked = cell.has_wall_east
  
             if blocked:
-                rail_x, rail_y = self.calc_rail(entity)
+                rail_x, rail_y = self._calc_rail(entity)
                 must_stop = False
                 match entity.current_dir:
                     case Direction.UP:
@@ -321,5 +358,5 @@ class GameModel(BaseModel):
                
                 # Snap flush to the tile center/rail and stop.
                 if must_stop: 
-                    entity.x, entity.y = self.calc_rail(entity)
+                    entity.x, entity.y = self._calc_rail(entity)
                     entity.current_dir = None 

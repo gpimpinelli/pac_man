@@ -112,7 +112,14 @@ class GameView:
                 btn.name
             )
 
-    def draw_menu(self, w: int, h: int, selected_index: int) -> None: 
+    def draw_menu(
+            self,
+            w: int,
+            h: int,
+            selected_index: int,
+            button_lst: list[str],
+            is_enter_name: bool = False
+    ) -> None: 
         # Reset the list each frame before adding buttons
         self.active_buttons.clear()
         # menu panel
@@ -126,12 +133,11 @@ class GameView:
         menu_h = h - (menu_y * 2)
         
         # general rule for button
-        num_buttons = 4
+        num_buttons = len(button_lst)
         btn_w = 200
         btn_h = 50
         gap = 20
         btn_color = 0x555555
-        button_name = ("START", "HIGHSCORES", "SETTINGS", "EXIT")
         
         # calculate for center of button
         total_block_height = (num_buttons * btn_h) + ((num_buttons - 1) * gap)
@@ -145,9 +151,11 @@ class GameView:
         # draw button
         for i in range(num_buttons):
             current_y = start_y + (i * (btn_h + gap))
-            
+
+            if is_enter_name:
+                color = 0xFFFFFF
             # Highlight selected button
-            if i == selected_index:
+            elif i == selected_index:
                 color = 0x888888
             else:
                 color = btn_color
@@ -159,7 +167,7 @@ class GameView:
                 color=color
             )
             new_botton = MenuButton(
-                name= button_name[i], 
+                name = button_lst[i],
                 x=start_x, 
                 y=current_y, 
                 w=btn_w, 
@@ -197,7 +205,6 @@ class GameView:
         for row in range(y0, y1):
             start = row * self.size_line + x0 * self.bytes_per_pixel
             self.data[start: start + row_len] = row_bytes
-
 
     def position_in_minimap(
         self,
@@ -262,12 +269,23 @@ class GameView:
         for ghost in model.ghosts:
             self.position_in_minimap(ghost.x, ghost.y, model.size, ghost.color)
 
+        # Draw ENTER - NAME menu
+        if model.state == GameState.ENTER_NAME:
+            self.draw_menu(
+                w=self.config.width,
+                h=self.config.height,
+                selected_index=model.selected_button_index,
+                button_lst = ["", "Enter Name"],
+                is_enter_name = True,
+            )
+
         # Draw MENU
         if model.state in (GameState.START_MENU, GameState.GAME_OVER):
             self.draw_menu(
                 w=self.config.width,
                 h=self.config.height,
-                selected_index=model.selected_button_index
+                selected_index=model.selected_button_index,
+                button_lst = ["START", "HIGHSCORES", "SETTINGS", "EXIT"]
             )
 
         # mlx_put_image_to_window: 
@@ -277,4 +295,3 @@ class GameView:
         # Draw text on top of buttons
         if model.state in (GameState.START_MENU, GameState.GAME_OVER):
             self.draw_button()
-            
