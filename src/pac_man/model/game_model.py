@@ -15,6 +15,7 @@ class GameState(Enum):
     PLAYING = auto()
     DEATH_PAUSE = auto()
     GAME_OVER = auto()
+    HIGHSCORES = auto()
     SETTINGS = auto()
     ENTER_NAME = auto()
 
@@ -49,7 +50,7 @@ class GameModel(BaseModel):
     # Disable assignment validation for performance during the 60fps loop
     model_config = ConfigDict(validate_assignment=False)
     
-
+    name_input: str = ""
 
     @model_validator(mode='after')
     def create_entity(self):
@@ -115,6 +116,19 @@ class GameModel(BaseModel):
             (col + 0.5) * self.tile_size,
             (row + 0.5) * self.tile_size
         )
+
+    @property
+    def menu_options(self) -> tuple[str, ...]:
+        if self.state == GameState.START_MENU:
+            return ("START", "HIGHSCORES", "SETTINGS", "EXIT")
+        elif self.state == GameState.GAME_OVER:
+            return ("RETRY", "MAIN MENU", "EXIT")
+        elif self.state == GameState.ENTER_NAME:
+            display_name = self.name_input if self.name_input else "Insert Name"
+            return (display_name, "SAVE SCORE")
+        elif self.state == GameState.HIGHSCORES:
+            return ("BACK TO MENU",)
+        return ()
 
     def remove_super(self):
         self.player.remove_super()
@@ -228,16 +242,16 @@ class GameModel(BaseModel):
             self.player.state = PlayerState.DEAD
 
             if not self.player.has_lives:
-                self.state = GameState.ENTER_NAME
-                self.highscore_manager.is_new_highscore = (
-                    self.highscore_manager.is_highscore(
-                        self.player.score
-                    )
-                )
+                is_high = self.highscore_manager.is_highscore(self.player.score)
+                # Forced for enter in enter name
+                is_high = True
+                if is_high:
+                    self.state = GameState.ENTER_NAME
+                else:
+                    self.state = GameState.GAME_OVER
             else:
                 self._reset_game()
         if self.state == GameState.START_MENU:
-            print("gipimpin")
             self._load_level(w=7, h=7)
 
         # ====================================================================

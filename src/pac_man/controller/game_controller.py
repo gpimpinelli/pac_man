@@ -105,26 +105,42 @@ class GameController:
         os._exit(0)
 
     def _handle_menu_selection(self) -> None:
-        """Execute the action corresponding to the selected menu button."""
-        match self.model.selected_button_index:
-            case 0:
-                self.model._reset_game()
-                self.model.player.lives = 3
-                self.model.player.state = PlayerState.ALIVE
-                self.model.state = GameState.DEATH_PAUSE
-            case 1:
-                # TODO lead to highscores page
-                print("Open Highscores...")
-            case 2:
-                # TODO lead to settings page
-                print("Open Settings")
-            case 3:
+        options = self.model.menu_options
+        if not options:
+            return
+            
+        selected_text = options[self.model.selected_button_index]
+
+        if selected_text in ("START", "RETRY"):
+            self.model._reset_game()
+            self.model.player.lives = 2
+            self.model.player.score = 0
+            self.model.player.state = PlayerState.ALIVE
+            self.model.state = GameState.DEATH_PAUSE
+            
+        elif selected_text == "SAVE SCORE":
+            if self.model.name_input.strip():
+                self.model.highscore_manager.add_score(
+                    self.model.name_input, self.model.player.score
+                )
+
+            self.model.name_input = ""
+            self.model.state = GameState.GAME_OVER
+            self.model.selected_button_index = 0
+        
+        elif selected_text == "HIGHSCORES":
+            self.model.state = GameState.HIGHSCORES
+            self.model.selected_button_index = 0
+            
+        elif selected_text == "MAIN MENU" or selected_text == "EXIT":
+            if selected_text == "EXIT":
                 self.close_game()
-            case _:
-                pass
+            else:
+                self.model.state = GameState.START_MENU
+                self.model.selected_button_index = 0
+
 
     def on_key_press(self, keycode: int, *args):
-        """Process keyboard input and update the model state."""
         if keycode in (KEY_ESC, 27, ord('q'), ord('Q')):
             self.close_game()
             
@@ -141,60 +157,37 @@ class GameController:
                 self.model.state = GameState.PLAYING
                 self.last_time = time.perf_counter()
 
-        # getattr(obj, variable, default)
-        elif (
-            self.model.state == GameState.ENTER_NAME
-            and getattr(
-                self.model.highscore_manager, 'is_new_highscore', False
-            )
-        ):
+        elif self.model.state == GameState.ENTER_NAME:
+            
             if keycode in (65293, 13):
-                self.model.highscore_manager.add_score(
-                    self.model.name_input,
-                    self.model.player.score
-                )
-            elif ((97 <= keycode <= 122)
-                  or (48 <= keycode <= 57)
-                  or keycode == 32
-            ):
+                self.model.selected_button_index = 1
+                self._handle_menu_selection()
+            
+            elif keycode == 65362: # SU
+                self.model.selected_button_index = (self.model.selected_button_index - 1) % 2
+
+            elif keycode == 65364: # GIÙ
+                self.model.selected_button_index = (self.model.selected_button_index + 1) % 2
+
+            elif (97 <= keycode <= 122) or (48 <= keycode <= 57) or keycode == 32:
+                # Limite di 10 caratteri per non sbordare
                 if len(self.model.name_input) < 10:
-                    char = chr(keycode).upper()
-                    self.model.name_input += char
+                    self.model.name_input += chr(keycode).upper()
+
             elif keycode == 65288:
                 self.model.name_input = self.model.name_input[:-1]
                 
-        elif self.model.state in (
-            GameState.GAME_OVER,
-            GameState.START_MENU,
-        ):
-            num_buttons = len(self.view.menu_buttons)
+        elif self.model.state in (GameState.GAME_OVER, GameState.START_MENU, GameState.HIGHSCORES):
+            options = self.model.menu_options
+            num_buttons = len(options) if options else 1
 
             if action == Direction.UP:
-                self.model.selected_button_index = (
-                    (self.model.selected_button_index - 1) % num_buttons
-                )
+                self.model.selected_button_index = (self.model.selected_button_index - 1) % num_buttons
             elif action == Direction.DOWN:
-                self.model.selected_button_index = (
-                    (self.model.selected_button_index + 1) % num_buttons
-                )
+                self.model.selected_button_index = (self.model.selected_button_index + 1) % num_buttons
             elif keycode in (65293, 13, 32):
                 self._handle_menu_selection()
 
-        elif self.model.state == GameState.ENTER_NAME:
-            num_buttons = len(self.view.name_buttons)            
-            if action == Direction.UP:
-                self.model.selected_button_index = (
-                    (self.model.selected_button_index - 1) % num_buttons
-                )
-            elif action == Direction.DOWN:
-                self.model.selected_button_index = (
-                    (self.model.selected_button_index + 1) % num_buttons
-                )
-            elif keycode in (65293, 13, 32):
-                self._handle_menu_selection()
-
-
-         
         return 0
 
     def update_game(self, *args):

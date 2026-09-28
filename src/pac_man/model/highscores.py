@@ -14,7 +14,6 @@ class HighscoreManager(BaseModel):
     scores: list[dict[str, object]] = []
 
     is_new_highscore: bool = False
-    name_input: str = ""
 
     @model_validator(mode='after')
     def init_load(self) -> "HighscoreManager":
@@ -58,6 +57,20 @@ class HighscoreManager(BaseModel):
 
         self.scores = loaded_scores[:10]
 
+    @property
+    def top_scores_text(self) -> list[str]:
+        scores_list = self.scores
+        
+        if not scores_list:
+            return ["NO SCORES YET"]
+            
+        formatted_scores = []
+        for i, item in enumerate(scores_list):
+            name = item.get("name", "PLAYER")
+            score = item.get("score", 0)
+            formatted_scores.append(f"{i + 1:2}. {name:<10} - {score:05}")
+            
+        return formatted_scores
 
     def _sanitize_name(self, name: object) -> str:
         """Name validation: max 10 char, only alfanumerics and spaces."""
