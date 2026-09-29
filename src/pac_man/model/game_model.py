@@ -18,6 +18,7 @@ class GameState(Enum):
     HIGHSCORES = auto()
     INSTRUCTIONS = auto()
     ENTER_NAME = auto()
+    # CHEAT MODE
 
 
 # ==========================================
@@ -91,7 +92,7 @@ class GameModel(BaseModel):
         self.player.y = y_pixel
         self.player.coords_spawn = (x_pixel, y_pixel)
 
-        speed = 80
+        speed = 90 * (1.05 ** self.current_level_index)
 
         for coords, c in zip(self.maze.ghost_spawns, COLORS):
             coords_pixel: tuple[int, int] = cell_to_pixel(
@@ -231,13 +232,13 @@ class GameModel(BaseModel):
 
         if cell.has_pacgum:
             cell.remove_gum(is_super_gum=False)
-            self.player.score += self.config_data["points_per_pacgum"]
+            self.player.score += int(self.config_data["points_per_pacgum"] * self.player.multiplicator)
             self.maze.total_pacgums -= 1
             
         elif cell.has_super_pacgum:
             cell.remove_gum(is_super_gum=True)
-            self.player.score += self.config_data["points_per_super_pacgum"]
-            self.player.super_timer = 40.0
+            self.player.score += int(self.config_data["points_per_super_pacgum"] * self.player.multiplicator)
+            self.player.super_timer = (self.config_data["level_max_time"] // 5) + (1.5 * self.current_level_index)
             self._change_ghosts_state(GhostState.FRIGHTENED)
             self.maze.total_pacgums -= 1
 
@@ -272,7 +273,6 @@ class GameModel(BaseModel):
                 if ghost.state == GhostState.SCATTER:
                     ghost.state = GhostState.CHASE
 
-
         self._handle_steering(self.player, dt)
         self._apply_movement(self.player, dt)
         self._handle_wall_collisions(self.player)
@@ -295,16 +295,15 @@ class GameModel(BaseModel):
         self._check_and_eat_gum()
 
         ghost_index = self._check_entity_collisions()
-        
+
         if ghost_index != -1:
             collided_ghost = self.ghosts[ghost_index]
-            for ghost in self.ghosts:
-                print(ghost.state)
             if collided_ghost.state != GhostState.EATEN:
                 
                 if self.player.is_super and not collided_ghost.state in (GhostState.SCATTER, GhostState.CHASE):
                     # Pac-Man mangia il fantasma
-                    self.player.score += self.config_data["points_per_ghost"]
+                    self.player.multiplicator = 1.5
+                    self.player.score += int(self.config_data["points_per_ghost"] * self.player.multiplicator)
                     collided_ghost.state = GhostState.EATEN
                 
                 elif self.player.is_super and collided_ghost.state != GhostState.CHASE: 
@@ -341,6 +340,9 @@ class GameModel(BaseModel):
             if self.player.super_timer <= 0:
                 self.player.super_timer = 0.0
                 self._change_ghosts_state(GhostState.CHASE)
+
+        if not self.player.is_super:
+            self.player.multiplicator = 1
 
     def _handle_steering(self, entity: Entity, dt: float):
         if entity.desired_dir and entity.desired_dir != entity.current_dir:
