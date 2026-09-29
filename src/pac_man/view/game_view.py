@@ -22,7 +22,6 @@ class MenuButton:
     y: int
     w: int
     h: int
-    is_hovered: bool = False
 
 # ==========================================
 # 2. VIEW (Graphics Engine and Rendering)
@@ -103,6 +102,9 @@ class GameView:
             text_color = 0xFFFFFF
             
             if current_state == GameState.ENTER_NAME and i == 0:
+                text_color = 0x000000
+
+            if current_state == GameState.ENTER_NAME and i == 1:
                 text_color = 0x333333 
 
             text_width = len(btn.name) * 10
@@ -179,14 +181,12 @@ class GameView:
             w: int,
             h: int,
             selected_index: int,
-            button_lst: tuple[str, ...], # (Opzionale: meglio tuple invece di list)
+            button_lst: tuple[str, ...],
             is_enter_name: bool = False
     ) -> None: 
         
-        # Svuota la lista corretta ad ogni frame!
         self.active_buttons.clear()
             
-        # menu panel
         padding_menu: tuple[int, int] = (w // 4, h // 4)
         self._background_menu(padding_menu, w, h, 0xFFB8FF)
         
@@ -196,48 +196,46 @@ class GameView:
         menu_w = w - (menu_x * 2)
         menu_h = h - (menu_y * 2)
         
-        # general rule for button
         num_buttons = len(button_lst)
         btn_w = 200
         btn_h = 50
         gap = 20
         btn_color = 0x555555
         
-        # calculate for center of button
         total_block_height = (num_buttons * btn_h) + ((num_buttons - 1) * gap)
-        
-        # caluclate start_x for draw button
         start_x = menu_x + ((menu_w - btn_w) // 2)
-        
-        # caluclate start_x for draw button
         start_y = menu_y + ((menu_h - total_block_height) // 2)
         
-        # draw button
         for i in range(num_buttons):
             current_y = start_y + (i * (btn_h + gap))
+            
+            draw_bg = True
+            color = btn_color
 
             if is_enter_name and i == 0:
-                color = 0xFFFFFF
-            # Highlight selected button
+                # Non disegna il rettangolo, mostrando direttamente il rosa del menu
+                draw_bg = False
+            elif is_enter_name and i == 1:
+                # Sfondo bianco per l'input; diventa leggermente grigio se selezionato
+                color = 0xFFFFFF if i != selected_index else 0xDDDDDD
             elif i == selected_index:
                 color = 0x888888
-            else:
-                color = btn_color
 
-            self.draw_rect_fast(
-                coords=(start_x, current_y), 
-                w=btn_w, 
-                h=btn_h, 
-                color=color
-            )
+            if draw_bg:
+                self.draw_rect_fast(
+                    coords=(start_x, current_y), 
+                    w=btn_w, 
+                    h=btn_h, 
+                    color=color
+                )
+            
             new_button = MenuButton(
-                name = button_lst[i],
+                name=button_lst[i],
                 x=start_x, 
                 y=current_y, 
                 w=btn_w, 
                 h=btn_h
             )
-
             self.active_buttons.append(new_button)
 
     def clear(self) -> None:

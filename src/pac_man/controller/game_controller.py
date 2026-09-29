@@ -202,23 +202,19 @@ class GameController:
                 self.last_time = time.perf_counter()
 
         elif self.model.state == GameState.ENTER_NAME:
-            
-            if keycode in (65293, 13):
-                self.model.selected_button_index = 1
+            if keycode in (self.Key.ENTER, 13):
+                self.model.selected_button_index = 2
                 self._handle_menu_selection()
             
-            elif keycode == 65362: # SU
-                self.model.selected_button_index = (
-                    (self.model.selected_button_index - 1) % 2
-                )
-
-            elif keycode == 65364: # GIÙ
-                self.model.selected_button_index = (
-                    (self.model.selected_button_index + 1) % 2
-                )
+            elif keycode in (self.Key.UP, self.Key.DOWN):
+                if self.model.selected_button_index == 0:
+                    self.model.selected_button_index = 1
+                else:
+                    # Alterna elegantemente tra 1 e 2
+                    self.model.selected_button_index = 3 - self.model.selected_button_index
 
             elif (
-                (97 <= keycode <= 122) or (48 <= keycode <= 57) or keycode == 32
+                (97 <= keycode <= 122) or (48 <= keycode <= 57) or keycode == self.key.SPACE
             ):
                 # Limite di 10 caratteri per non sbordare
                 if len(self.model.name_input) < 10:

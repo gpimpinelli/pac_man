@@ -21,6 +21,7 @@ surface game maker
 ## 1) insert GameState.CHEAT
 ## 5) cheat mode (1 no wall collision for player(just the wall inside), 2 super gum infinito, 3) infinity lives 4) to be able to shoot 5) for ecer super 6) caricare direttamente un livello
 ## inserire nelle view stat a che livello siamo
+## scegliere la palette di colori e inserirli in un enum
 ## 7) find sprites and cut the background (wall player and ghost)
 ## capire come facilitare i livelli piu avanti
 1. Aumentare il tempo dei Super Pac Gum
