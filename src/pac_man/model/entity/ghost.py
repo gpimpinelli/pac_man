@@ -6,7 +6,7 @@ from enum import Enum, auto
 from src.pac_man.utils import pixel_to_cell
 
 class GhostState(Enum):
-    SCATTER = auto()    # Pattuglia il suo angolo
+    SCATTER = auto()    # Mosse casuali
     CHASE = auto()      # Insegue Pac-Man
     FRIGHTENED = auto() # Blu e vulnerabile
     EATEN = auto()      # Solo gli occhi che tornano alla base

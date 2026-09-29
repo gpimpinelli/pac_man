@@ -29,6 +29,7 @@ class GameModel(BaseModel):
     Inherits from Pydantic's BaseModel for rigid data initialization.
     """
     size: int = 16
+
     # Environment constraints
     screen_width: int = Field(..., gt=0)
     screen_height: int = Field(..., gt=0)
@@ -90,7 +91,7 @@ class GameModel(BaseModel):
         self.player.y = y_pixel
         self.player.coords_spawn = (x_pixel, y_pixel)
 
-        speed = 100
+        speed = 80
 
         for coords, c in zip(self.maze.ghost_spawns, COLORS):
             coords_pixel: tuple[int, int] = cell_to_pixel(
@@ -129,7 +130,7 @@ class GameModel(BaseModel):
 
     def _change_ghosts_state(self, new_state: GhostState) -> None:
         for ghost in self.ghosts:
-            if new_state != ghost.state:
+            if ghost.state != GhostState.EATEN and ghost.state != new_state:
                 ghost.state = new_state
 
     def _calc_rail(self, entity: Entity) -> tuple[int, int]:
@@ -236,7 +237,7 @@ class GameModel(BaseModel):
         elif cell.has_super_pacgum:
             cell.remove_gum(is_super_gum=True)
             self.player.score += self.config_data["points_per_super_pacgum"]
-            self.player.super_timer = 30.0
+            self.player.super_timer = 40.0
             self._change_ghosts_state(GhostState.FRIGHTENED)
             self.maze.total_pacgums -= 1
 
@@ -267,7 +268,9 @@ class GameModel(BaseModel):
             return
 
         if self.level_time_remaining < self.config_data["level_max_time"] - 7:
-            self._change_ghosts_state(GhostState.CHASE)
+            for ghost in self.ghosts:
+                if ghost.state == GhostState.SCATTER:
+                    ghost.state = GhostState.CHASE
 
 
         self._handle_steering(self.player, dt)
@@ -276,8 +279,10 @@ class GameModel(BaseModel):
 
         for ghost in self.ghosts:
             if ghost.state == GhostState.EATEN:
-                if (abs(ghost.x - ghost.coords_spawn[0]) < 1.0 and 
-                    abs(ghost.y - ghost.coords_spawn[1]) < 1.0):
+                tolerance = ghost.speed * dt
+                
+                if (abs(ghost.x - ghost.coords_spawn[0]) <= tolerance and 
+                    abs(ghost.y - ghost.coords_spawn[1]) <= tolerance):
                     
                     ghost.state = GhostState.CHASE
                     ghost.x, ghost.y = ghost.coords_spawn
@@ -293,12 +298,11 @@ class GameModel(BaseModel):
         
         if ghost_index != -1:
             collided_ghost = self.ghosts[ghost_index]
-
-            # Fondamentale: ignora le collisioni con i fantasmi già mangiati (EATEN).
-            # Così Pac-Man non muore toccandoli e non può mangiarli due volte.
+            for ghost in self.ghosts:
+                print(ghost.state)
             if collided_ghost.state != GhostState.EATEN:
                 
-                if self.player.is_super and not collided_ghost.state != GhostState.FRIGHTENED:
+                if self.player.is_super and not collided_ghost.state in (GhostState.SCATTER, GhostState.CHASE):
                     # Pac-Man mangia il fantasma
                     self.player.score += self.config_data["points_per_ghost"]
                     collided_ghost.state = GhostState.EATEN
