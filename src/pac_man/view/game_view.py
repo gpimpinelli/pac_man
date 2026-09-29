@@ -145,7 +145,7 @@ class GameView:
             MenuButton(name=button_lst[0], x=btn_x, y=btn_y, w=btn_w, h=btn_h)
         )
 
-    def draw_text(self, w: int, h: int, text: list[str], is_highscores: bool = True) -> None:
+    def draw_text(self, w: int, h: int, text: list[str], is_highscores: bool = False) -> None:
         """Disegna il testo centrato direttamente sulla finestra (dopo il put_image)."""
         padding_menu: tuple[int, int] = (w // 4, h // 4)
         menu_w = w - (padding_menu[0] * 2)
@@ -295,6 +295,26 @@ class GameView:
         mini_size = max(2, int(size * ratio))
         self.minimap_renderer.draw_player(mini_px, mini_py, mini_size, color)
 
+    def print_game_info(
+        self,
+        x: int,
+        y: int,
+        text: list[str]
+    ) -> None:
+        line_height = 20
+        for i, line in enumerate(text):
+            text_y = int(y) + (line_height * i)
+            # MLX supporta il testo solo tramite string_put sulla finestra, non sull'immagine
+            self.m.mlx_string_put(
+                self.mlx_ptr,
+                self.win_ptr,
+                int(x),
+                text_y,
+                0xFFFFFF,
+                line
+            )
+
+
 
     def render(self, model: GameModel) -> None:
         """Extract data from the Model and render it to the window."""
@@ -387,3 +407,14 @@ class GameView:
                 is_highscores=(model.state == GameState.HIGHSCORES)
             )
             self.draw_button(model.state)
+
+        game_info = [
+            f"Score: {model.player.score}",
+            "Lives: " + model.player.lives * "<3 "  
+        ]
+        
+        self.print_game_info(
+            x=self.minimap_renderer.view_x,
+            y=self.minimap_renderer.view_y + self.minimap_renderer.view_h + 20,
+            text=game_info
+        )

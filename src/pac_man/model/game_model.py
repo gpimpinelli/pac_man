@@ -210,10 +210,7 @@ class GameModel(BaseModel):
             dt: Delta time elapsed since the last frame, in seconds.
         """
 
-        if self.state != GameState.PLAYING:
-            return
-        
-        if self.state == GameState.GAME_OVER:
+        if self.state != GameState.PLAYING or self.state == GameState.GAME_OVER:
             return
 
         self._handle_steering(self.player, dt)
@@ -221,6 +218,13 @@ class GameModel(BaseModel):
         self._handle_wall_collisions(self.player)
 
         for ghost in self.ghosts:
+            if ghost.state == GhostState.EATEN:
+                if (abs(ghost.x - ghost.coords_spawn[0]) < 1.0 and 
+                    abs(ghost.y - ghost.coords_spawn[1]) < 1.0):
+                    
+                    ghost.state = GhostState.CHASE
+                    ghost.x, ghost.y = ghost.coords_spawn
+
             ghost.update_intention(self)
             self._handle_steering(ghost, dt)
             self._apply_movement(ghost, dt)
@@ -229,28 +233,40 @@ class GameModel(BaseModel):
         self._check_and_eat_gum()
 
         ghost_index = self._check_entity_collisions()
-        if (
-            ghost_index != -1
-            and self.player.is_super
-            and not self.ghosts[ghost_index].is_already_eaten
-        ):
-            self.player.score += 200
-            self.ghosts[ghost_index].state = GhostState.EATEN
+        
+        if ghost_index != -1:
+            collided_ghost = self.ghosts[ghost_index]
 
-        elif ghost_index != -1 and not self.player.is_super:
-            self.player.lives -= 1
-            self.player.state = PlayerState.DEAD
+            # Fondamentale: ignora le collisioni con i fantasmi già mangiati (EATEN).
+            # Così Pac-Man non muore toccandoli e non può mangiarli due volte.
+            if collided_ghost.state != GhostState.EATEN:
+                
+                if self.player.is_super and not collided_ghost.state != GhostState.FRIGHTENED:
+                    # Pac-Man mangia il fantasma
+                    self.player.score += 200
+                    collided_ghost.state = GhostState.EATEN
+                
+                elif self.player.is_super and collided_ghost.state != GhostState.CHASE: 
+                    print("mannaggia al clero")
+                    self.player.lives -= 1
+                    self.player.state = PlayerState.DEAD
 
-            if not self.player.has_lives:
-                is_high = self.highscore_manager.is_highscore(self.player.score)
-                # Forced for enter in enter name
-                is_high = True
-                if is_high:
-                    self.state = GameState.ENTER_NAME
+                    if not self.player.has_lives:
+                        self.state = GameState.ENTER_NAME
+                    else:
+                        self._reset_game()
+
                 else:
-                    self.state = GameState.GAME_OVER
-            else:
-                self._reset_game()
+                    # Il fantasma mangia Pac-Man
+                    self.player.lives -= 1
+                    self.player.state = PlayerState.DEAD
+
+                    if not self.player.has_lives:
+                        self.state = GameState.ENTER_NAME
+                    else:
+                        self._reset_game()
+
+
         if self.state == GameState.START_MENU:
             self._load_level(w=7, h=7, is_first=True)
 
