@@ -82,8 +82,6 @@ class GameView:
             tile_size=10
         )
 
-        self.highscores: HighscoreManager = HighscoreManager()
-
     def _background_menu(
         self, padding: tuple[int, int], w: int, h: int, color: int=0x222222
     ) -> None:
@@ -119,13 +117,31 @@ class GameView:
             )
 
     def draw_highscores(self, w: int, h: int) -> None:
+        """Disegna solo lo sfondo del menu highscores nel buffer dell'immagine."""
         padding_menu: tuple[int, int] = (w // 4, h // 4)
         self._background_menu(padding_menu, w, h, 0x888888)
-        line = 35
-        for i, score in enumerate(self.highscores.top_scores_text):
+
+    def draw_highscores_text(self, w: int, h: int, model: GameModel) -> None:
+        """Disegna il testo centrato direttamente sulla finestra (dopo il put_image)."""
+        padding_menu: tuple[int, int] = (w // 4, h // 4)
+        menu_w = w - (padding_menu[0] * 2)
+        menu_h = h - (padding_menu[1] * 2)
+
+        scores = model.highscore_manager.top_scores_text
+        line_height = 35
+        total_text_height = len(scores) * line_height
+
+        # Calcola la coordinata Y di partenza per centrare le righe anche verticalmente
+        start_y = padding_menu[1] + max(20, (menu_h - total_text_height) // 2)
+
+        for i, score in enumerate(scores):
+            # Stima della larghezza del font bitmap predefinito (~10 px per carattere)
             text_width = len(score) * 10
-            text_x = padding_menu[0] + (text_width // 2)
-            text_y = padding_menu[1] + 10 + (line * i)
+            
+            # Centratura orizzontale esatta rispetto al box del menu
+            text_x = padding_menu[0] + ((menu_w - text_width) // 2)
+            text_y = start_y + (line_height * i)
+
             self.m.mlx_string_put(
                 self.mlx_ptr,
                 self.win_ptr,
@@ -257,68 +273,62 @@ class GameView:
         self.minimap_renderer.draw_player(mini_px, mini_py, mini_size, color)
 
 
-    def render(self, model: GameModel)  -> None:
-        """
-        Extract data from the Model and render it to the window.
-        """
-        # mlx_sync: Force X11 to finish 
-        # draw_player(self, x: float, y: float, size: int, color: int)
-        # reading the image buffer before we overwrite it
-        self.m.mlx_sync(self.mlx_ptr, mlx.Mlx.SYNC_IMAGE_WRITABLE, self.img)
+    def render(self, model: GameModel) -> None:
+        """Extract data from the Model and render it to the window."""
+        # 1. Pulisci l'intero buffer di memoria
         self.clear()
-        
-        # Draw the main map
-        self.main_renderer.draw_maze(model.maze)
 
-        # Draw the player
+        # 2. Disegna maze e personaggi sul buffer principale
+        self.main_renderer.draw_maze(model.maze)
         self.main_renderer.draw_player(
             model.player.x + self.main_renderer.offset_x,
             model.player.y + self.main_renderer.offset_y,
-            model.size, 
-            model.player.color
+            model.size,
+            model.player.color,
         )
         for ghost in model.ghosts:
             self.main_renderer.draw_player(
                 ghost.x + self.main_renderer.offset_x,
                 ghost.y + self.main_renderer.offset_y,
                 model.size,
-                ghost.color
+                ghost.color,
             )
 
-        # Draw the mini map
+        # 3. Disegna minimappa
         self.minimap_renderer.draw_maze(model.maze)
-
-        # Move the player to the new coordinates
         self.position_in_minimap(
             model.player.x, model.player.y, model.size, model.player.color
         )
         for ghost in model.ghosts:
             self.position_in_minimap(ghost.x, ghost.y, model.size, ghost.color)
 
-        # Draw ENTER - NAME menu
+        # 4. Menu
         if model.state in (
             GameState.START_MENU,
             GameState.GAME_OVER,
-            GameState.ENTER_NAME
+            GameState.ENTER_NAME,
         ):
             self.draw_menu(
                 w=self.config.width,
                 h=self.config.height,
                 selected_index=model.selected_button_index,
                 button_lst=model.menu_options,
-                is_enter_name=(model.state == GameState.ENTER_NAME)
+                is_enter_name=(model.state == GameState.ENTER_NAME),
             )
         elif model.state == GameState.HIGHSCORES:
             self.draw_highscores(w=self.config.width, h=self.config.height)
 
-        # mlx_put_image_to_window: 
-        # Dump the completed off-screen image buffer onto the active window
+        # 5. UNICO invio a schermo di tutto il frame calcolato
         self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.img, 0, 0)
 
-        # Draw text on top of buttons
+        # 6. Testi vettoriali X11
         if model.state in (
             GameState.START_MENU,
             GameState.GAME_OVER,
-            GameState.ENTER_NAME
+            GameState.ENTER_NAME,
         ):
             self.draw_button(model.state)
+        elif model.state == GameState.HIGHSCORES:
+            self.draw_highscores_text(
+                w=self.config.width, h=self.config.height, model=model
+            )
