@@ -138,7 +138,7 @@ class GameModel(BaseModel):
     def _load_level(self, w:int, h: int, is_first: bool = False) -> None:
         seed = 42 if is_first else random.randint(0, 100000)
         self._reset_game()
-        self.maze = MazeAdapter(width=w, height=h)
+        self.maze = MazeAdapter(width=w, height=h, seed=seed)
         self._spawn_entities(self.player, self.maze.player_spawn)
         self.remove_super()
         for i in range(len(self.ghosts)):
@@ -252,13 +252,12 @@ class GameModel(BaseModel):
             else:
                 self._reset_game()
         if self.state == GameState.START_MENU:
-            self._load_level(w=7, h=7)
+            self._load_level(w=7, h=7, is_first=True)
 
         # ====================================================================
         elif self.maze.finish_pacgums():
             self.state = GameState.DEATH_PAUSE
             self._load_level(9, 9)
-            print(self.ghosts[0].state)
             # TODO
             # mandare al livello successivo.
             # se finiti i livelli o vite

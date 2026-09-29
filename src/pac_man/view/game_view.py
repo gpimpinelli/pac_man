@@ -8,7 +8,7 @@ import mlx
 from typing import Any
 from .renderer import Renderer
 from dataclasses import dataclass
-from ..model import MazeAdapter, GameModel, GameState
+from ..model import GameModel, GameState, HighscoreManager
 
 def rgb_to_mlx(r: int, g: int, b: int) -> int:
     """Convert RGB (0-255) color channels to a 24-bit MLX integer color."""
@@ -82,6 +82,8 @@ class GameView:
             tile_size=10
         )
 
+        self.highscores: HighscoreManager = HighscoreManager()
+
     def _background_menu(
         self, padding: tuple[int, int], w: int, h: int, color: int=0x222222
     ) -> None:
@@ -114,6 +116,23 @@ class GameView:
                 text_y, 
                 text_color, 
                 btn.name
+            )
+
+    def draw_highscores(self, w: int, h: int) -> None:
+        padding_menu: tuple[int, int] = (w // 4, h // 4)
+        self._background_menu(padding_menu, w, h, 0x888888)
+        line = 35
+        for i, score in enumerate(self.highscores.top_scores_text):
+            text_width = len(score) * 10
+            text_x = padding_menu[0] + (text_width // 2)
+            text_y = padding_menu[1] + 10 + (line * i)
+            self.m.mlx_string_put(
+                self.mlx_ptr,
+                self.win_ptr,
+                text_x,
+                text_y,
+                0xFFFFFF,
+                score
             )
 
     def draw_menu(
@@ -277,7 +296,11 @@ class GameView:
             self.position_in_minimap(ghost.x, ghost.y, model.size, ghost.color)
 
         # Draw ENTER - NAME menu
-        if model.state in (GameState.START_MENU, GameState.GAME_OVER, GameState.ENTER_NAME):
+        if model.state in (
+            GameState.START_MENU,
+            GameState.GAME_OVER,
+            GameState.ENTER_NAME
+        ):
             self.draw_menu(
                 w=self.config.width,
                 h=self.config.height,
@@ -285,11 +308,17 @@ class GameView:
                 button_lst=model.menu_options,
                 is_enter_name=(model.state == GameState.ENTER_NAME)
             )
+        elif model.state == GameState.HIGHSCORES:
+            self.draw_highscores(w=self.config.width, h=self.config.height)
 
         # mlx_put_image_to_window: 
         # Dump the completed off-screen image buffer onto the active window
         self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.img, 0, 0)
 
         # Draw text on top of buttons
-        if model.state in (GameState.START_MENU, GameState.GAME_OVER, GameState.ENTER_NAME):
+        if model.state in (
+            GameState.START_MENU,
+            GameState.GAME_OVER,
+            GameState.ENTER_NAME
+        ):
             self.draw_button(model.state)

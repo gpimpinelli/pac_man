@@ -131,7 +131,7 @@ class GameController:
         selected_text = options[self.model.selected_button_index]
 
         if selected_text in ("START", "RETRY"):
-            self.model._reset_game()
+            self.model._load_level(w=7, h=7, is_first=True)
             self.model.player.lives = 2
             self.model.player.score = 0
             self.model.player.state = PlayerState.ALIVE
