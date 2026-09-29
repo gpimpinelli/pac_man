@@ -24,6 +24,24 @@ class GameConfig(BaseModel):
     target_fps: int = Field(
         default=60, gt=0, le=240, description="Target frames per second."
     )
+    game_rules: str = (
+        """OBJECTIVE:
+Eat all the Pac-Gums in the maze to clear the level
+and advance before time runs out. Avoid the ghosts!
+
+    Move Up:    [ W ] or [ UP ARROW ]
+    Move Left:  [ A ] or [ LEFT ARROW ]
+    Move Down:  [ S ] or [ DOWN ARROW ]
+    Move Right: [ D ] or [ RIGHT ARROW ]
+    Pause/Menu: [ ESC ] or [ P ]
+
+    Collect regular dots (Pac-Gums) to gain score.
+    Collect corner Super Pac-Gums to turn ghosts blue!
+    While blue, ghosts will flee: touch them to eat
+    them and send them back to their corner!
+    You start with 3 lives. Colliding with a normal 
+    ghost costs 1 life and respawns you in the center."""
+    )
 
 # ==========================================
 # 3. CONTROLLER (Input, Loop, and Integration)
@@ -150,6 +168,10 @@ class GameController:
         elif selected_text == "HIGHSCORES":
             self.model.state = GameState.HIGHSCORES
             self.model.selected_button_index = 0
+
+        elif selected_text == "INSTRUCTIONS":
+            self.model.state = GameState.INSTRUCTIONS
+            self.model.selected_button_index = 0
             
         elif selected_text == "MAIN MENU" or selected_text == "EXIT":
             if selected_text == "EXIT":
@@ -157,6 +179,10 @@ class GameController:
             else:
                 self.model.state = GameState.START_MENU
                 self.model.selected_button_index = 0
+
+        elif selected_text == "ENTER TO GO BACK":
+            self.model.state = GameState.START_MENU
+            self.model.selected_button_index = 0
 
 
     def on_key_press(self, keycode: int, *args):
@@ -196,7 +222,12 @@ class GameController:
             elif keycode == 65288:
                 self.model.name_input = self.model.name_input[:-1]
                 
-        elif self.model.state in (GameState.GAME_OVER, GameState.START_MENU, GameState.HIGHSCORES):
+        elif self.model.state in (
+            GameState.GAME_OVER,
+            GameState.START_MENU,
+            GameState.HIGHSCORES,
+            GameState.INSTRUCTIONS
+        ):
             options = self.model.menu_options
             num_buttons = len(options) if options else 1
 

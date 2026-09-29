@@ -82,6 +82,8 @@ class GameView:
             tile_size=10
         )
 
+        self._last_frame_key: object = None
+
     def _background_menu(
         self, padding: tuple[int, int], w: int, h: int, color: int=0x222222
     ) -> None:
@@ -116,27 +118,48 @@ class GameView:
                 btn.name
             )
 
-    def draw_highscores(self, w: int, h: int) -> None:
+    def draw_menu(
+            self, w: int, h: int,
+            button_lst: tuple[str, ...]
+    ) -> None:
         """Disegna solo lo sfondo del menu highscores nel buffer dell'immagine."""
+        self.active_buttons.clear()
+
         padding_menu: tuple[int, int] = (w // 4, h // 4)
         self._background_menu(padding_menu, w, h, 0x888888)
 
-    def draw_highscores_text(self, w: int, h: int, model: GameModel) -> None:
+        menu_w = w - (padding_menu[0] * 2)
+        menu_h = h - (padding_menu[1] * 2)
+
+        btn_w, btn_h = 200, 50
+        btn_x = padding_menu[0] + (menu_w - btn_w) // 2
+        btn_y = padding_menu[1] + menu_h - btn_h - 20
+
+        self.draw_rect_fast(
+            coords=(btn_x, btn_y),
+            w=btn_w,
+            h=btn_h, 
+            color=0x555555
+        )
+        self.active_buttons.append(
+            MenuButton(name=button_lst[0], x=btn_x, y=btn_y, w=btn_w, h=btn_h)
+        )
+
+    def draw_text(self, w: int, h: int, text: list[str], is_highscores: bool = True) -> None:
         """Disegna il testo centrato direttamente sulla finestra (dopo il put_image)."""
         padding_menu: tuple[int, int] = (w // 4, h // 4)
         menu_w = w - (padding_menu[0] * 2)
         menu_h = h - (padding_menu[1] * 2)
 
-        scores = model.highscore_manager.top_scores_text
-        line_height = 35
-        total_text_height = len(scores) * line_height
+        line_height = 30 if is_highscores else 20
+        total_text_height = len(text) * line_height
 
         # Calcola la coordinata Y di partenza per centrare le righe anche verticalmente
         start_y = padding_menu[1] + max(20, (menu_h - total_text_height) // 2)
 
-        for i, score in enumerate(scores):
+        for i, line in enumerate(text):
             # Stima della larghezza del font bitmap predefinito (~10 px per carattere)
-            text_width = len(score) * 10
+            text_width = len(line) * 10
             
             # Centratura orizzontale esatta rispetto al box del menu
             text_x = padding_menu[0] + ((menu_w - text_width) // 2)
@@ -148,10 +171,10 @@ class GameView:
                 text_x,
                 text_y,
                 0xFFFFFF,
-                score
+                line
             )
 
-    def draw_menu(
+    def draw_main_menu(
             self,
             w: int,
             h: int,
@@ -275,6 +298,28 @@ class GameView:
 
     def render(self, model: GameModel) -> None:
         """Extract data from the Model and render it to the window."""
+        static_states = (
+            GameState.START_MENU,
+            GameState.GAME_OVER,
+            GameState.ENTER_NAME,
+            GameState.HIGHSCORES,
+            GameState.INSTRUCTIONS,
+        )
+        if model.state in static_states:
+            key = (
+                model.state,
+                model.selected_button_index,
+                tuple(model.menu_options),
+                tuple(model.highscore_manager.top_scores_text),
+            )
+            if key == self._last_frame_key:
+                # no change
+                return
+            self._last_frame_key = key
+        else:
+            # if state != static state always reset to None
+            self._last_frame_key = None
+
         # 1. Pulisci l'intero buffer di memoria
         self.clear()
 
@@ -306,17 +351,21 @@ class GameView:
         if model.state in (
             GameState.START_MENU,
             GameState.GAME_OVER,
-            GameState.ENTER_NAME,
+            GameState.ENTER_NAME
         ):
-            self.draw_menu(
+            self.draw_main_menu(
                 w=self.config.width,
                 h=self.config.height,
                 selected_index=model.selected_button_index,
                 button_lst=model.menu_options,
                 is_enter_name=(model.state == GameState.ENTER_NAME),
             )
-        elif model.state == GameState.HIGHSCORES:
-            self.draw_highscores(w=self.config.width, h=self.config.height)
+        elif model.state in (GameState.HIGHSCORES, GameState.INSTRUCTIONS):
+            self.draw_menu(
+                w=self.config.width,
+                h=self.config.height,
+                button_lst=model.menu_options,
+            )
 
         # 5. UNICO invio a schermo di tutto il frame calcolato
         self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.img, 0, 0)
@@ -328,7 +377,13 @@ class GameView:
             GameState.ENTER_NAME,
         ):
             self.draw_button(model.state)
-        elif model.state == GameState.HIGHSCORES:
-            self.draw_highscores_text(
-                w=self.config.width, h=self.config.height, model=model
+        elif model.state in (GameState.HIGHSCORES, GameState.INSTRUCTIONS):
+            if model.state == GameState.HIGHSCORES:
+                text = model.highscore_manager.top_scores_text
+            else:
+                text = self.config.game_rules.split("\n")
+            self.draw_text(
+                w=self.config.width, h=self.config.height, text=text,
+                is_highscores=(model.state == GameState.HIGHSCORES)
             )
+            self.draw_button(model.state)

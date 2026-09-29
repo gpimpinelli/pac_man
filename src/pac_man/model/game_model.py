@@ -16,7 +16,7 @@ class GameState(Enum):
     DEATH_PAUSE = auto()
     GAME_OVER = auto()
     HIGHSCORES = auto()
-    SETTINGS = auto()
+    INSTRUCTIONS = auto()
     ENTER_NAME = auto()
 
 
@@ -120,14 +120,14 @@ class GameModel(BaseModel):
     @property
     def menu_options(self) -> tuple[str, ...]:
         if self.state == GameState.START_MENU:
-            return ("START", "HIGHSCORES", "SETTINGS", "EXIT")
+            return ("START", "HIGHSCORES", "INSTRUCTIONS", "EXIT")
         elif self.state == GameState.GAME_OVER:
             return ("RETRY", "MAIN MENU", "EXIT")
         elif self.state == GameState.ENTER_NAME:
             display_name = self.name_input if self.name_input else "Insert Name"
             return (display_name, "SAVE SCORE")
-        elif self.state == GameState.HIGHSCORES:
-            return ("BACK TO MENU",)
+        elif self.state in (GameState.HIGHSCORES, GameState.INSTRUCTIONS):
+            return ("ENTER TO GO BACK",)
         return ()
 
     def remove_super(self):
