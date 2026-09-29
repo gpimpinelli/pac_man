@@ -1,8 +1,9 @@
 import os
 import time
+from typing import Any
 from ..view import GameView
 from pydantic import BaseModel, Field
-from ..model import MazeAdapter, GameModel, Direction, GameState
+from ..model import GameModel, Direction, GameState
 from src.pac_man.model.entity import PlayerState
 from enum import IntEnum
 
@@ -86,13 +87,12 @@ class GameController:
         Key.D: Direction.RIGHT,
     }
 
-
-    def __init__(self):
+    def __init__(self, config_data: dict[str, Any] = None):
         """Initialize the Controller using Pydantic configurations."""
         
         self.config = GameConfig(width=1640, height=1000, target_fps=60)
+
         self.last_time = time.perf_counter()
-        self.maze = MazeAdapter(seed=900, width=7, height=7)
         
         self.view = GameView(self.config)
 
@@ -100,8 +100,8 @@ class GameController:
         self.model = GameModel(
             screen_width=self.config.width,
             screen_height=self.config.height,
-            maze=self.maze,
             tile_size=self.view.main_renderer.tile_size,
+            config_data=config_data
         )
 
         self.model.size = int(self.view.main_renderer.tile_size * 0.5)
@@ -147,10 +147,9 @@ class GameController:
             return
             
         selected_text = options[self.model.selected_button_index]
-
         if selected_text in ("START", "RETRY"):
-            self.model._load_level(w=7, h=7, is_first=True)
-            self.model.player.lives = 2
+            self.model._load_level(is_first=True)
+            self.model.player.lives = self.model.config_data.get("lives", 3)
             self.model.player.score = 0
             self.model.player.state = PlayerState.ALIVE
             self.model.state = GameState.DEATH_PAUSE
@@ -209,12 +208,18 @@ class GameController:
                 self._handle_menu_selection()
             
             elif keycode == 65362: # SU
-                self.model.selected_button_index = (self.model.selected_button_index - 1) % 2
+                self.model.selected_button_index = (
+                    (self.model.selected_button_index - 1) % 2
+                )
 
             elif keycode == 65364: # GIÙ
-                self.model.selected_button_index = (self.model.selected_button_index + 1) % 2
+                self.model.selected_button_index = (
+                    (self.model.selected_button_index + 1) % 2
+                )
 
-            elif (97 <= keycode <= 122) or (48 <= keycode <= 57) or keycode == 32:
+            elif (
+                (97 <= keycode <= 122) or (48 <= keycode <= 57) or keycode == 32
+            ):
                 # Limite di 10 caratteri per non sbordare
                 if len(self.model.name_input) < 10:
                     self.model.name_input += chr(keycode).upper()
@@ -249,7 +254,7 @@ class GameController:
         current_time = time.perf_counter()
         dt = current_time - self.last_time
         frame_duration = 1.0 / self.config.target_fps
-
+        
         if dt < frame_duration:
             return 0
 
@@ -257,10 +262,6 @@ class GameController:
 
         # model.update(dt) UPDATE the game only in PLAYING state
         self.model.update(dt)
-
-        if (self.model.player.state == PlayerState.DEAD
-                and self.model.player.has_lives):
-            pass
 
         # Always render the screen
         self.view.render(self.model)

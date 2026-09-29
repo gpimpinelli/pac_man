@@ -1,8 +1,8 @@
 {
     "highscore_filename": "highscores.json",
-    "lives": 3,
-    "seed": 42,
-    "level_max_time": 90,
+    "lives": 2, // da rivedere
+    "seed": 42, //inserire var bool nel primo livello
+    "level_max_time": 60, // inserire time
 
     "points_per_pacgum": 10,
     "points_per_super_pacgum": 50,

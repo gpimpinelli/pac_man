@@ -33,7 +33,7 @@ class GameModel(BaseModel):
     screen_width: int = Field(..., gt=0)
     screen_height: int = Field(..., gt=0)
     
-    maze: Any
+    maze: Any = Field(default=None)
 
     state: GameState = GameState.START_MENU
 
@@ -47,13 +47,35 @@ class GameModel(BaseModel):
     # HIGHSCORE
     highscore_manager: HighscoreManager = Field(default_factory=HighscoreManager)
 
+    name_input: str = ""
+
+    # Point
+    config_data: dict[str, Any] = Field(default_factory=dict)
+
+    level_time_remaining: float = 0.0
+
+    current_level_index: int = 0
+
     # Disable assignment validation for performance during the 60fps loop
     model_config = ConfigDict(validate_assignment=False)
-    
-    name_input: str = ""
+
 
     @model_validator(mode='after')
     def create_entity(self):
+        # 1. Inizializza l'HighscoreManager
+        self.highscore_manager = HighscoreManager(filepath=self.config_data.get("highscore_filename", "highscores.json"))
+        
+        # 2. CREA IL LABIRINTO INIZIALE (Sfondo del menu)
+        # Prendi le misure dal primo livello indicato nel config (o usa default se assente)
+        levels_list = self.config_data.get("levels", [{"width": 15, "height": 15}])
+        w = levels_list[0]["width"]
+        h = levels_list[0]["height"]
+        seed = self.config_data.get("seed", 42)
+        
+        # Istanzia il MazeAdapter qui!
+        self.maze = MazeAdapter(width=w, height=h, seed=seed)
+
+        # 3. Ora self.maze esiste: puoi leggere player_spawn in sicurezza
         spawn_x, spawn_y = cell_to_pixel(
             self.maze.player_spawn,
             (0, 0),
@@ -82,7 +104,7 @@ class GameModel(BaseModel):
                     y=y_pixel,
                     color=c,
                     speed=speed,
-                    state=GhostState.CHASE,
+                    state=GhostState.SCATTER,
                     coords_spawn=(x_pixel, y_pixel),
                 )
             )
@@ -109,7 +131,7 @@ class GameModel(BaseModel):
         for ghost in self.ghosts:
             if new_state != ghost.state:
                 ghost.state = new_state
-    
+
     def _calc_rail(self, entity: Entity) -> tuple[int, int]:
         col, row = pixel_to_cell((entity.x, entity.y), (0, 0), self.tile_size)
         return(
@@ -135,20 +157,38 @@ class GameModel(BaseModel):
         self._change_ghosts_state(GhostState.CHASE)
 
 
-    def _load_level(self, w:int, h: int, is_first: bool = False) -> None:
-        seed = 42 if is_first else random.randint(0, 100000)
+    def _load_level(self, is_first: bool = False) -> None:
+        if is_first:
+            self.current_level_index = 0
+            
+        levels_list = self.config_data.get("levels", [{"width": 15, "height": 15}])
+        
+        # Evita errori se il giocatore supera l'ultimo livello disponibile
+        if self.current_level_index >= len(levels_list):
+            self.current_level_index = len(levels_list) - 1
+            
+        current_level = levels_list[self.current_level_index]
+        w = current_level["width"]
+        h = current_level["height"]
+        
+        seed = self.config_data.get("seed", 42) if is_first else random.randint(0, 100000)
+        
         self._reset_game()
         self.maze = MazeAdapter(width=w, height=h, seed=seed)
+        
         self._spawn_entities(self.player, self.maze.player_spawn)
-        self.remove_super()
         for i in range(len(self.ghosts)):
             self._spawn_entities(self.ghosts[i], self.maze.ghost_spawns[i])
+            
+        self.level_time_remaining = float(self.config_data.get("level_max_time", 90))
 
     def _reset_game(self) -> None:
         self._freeze_game()
+        self.remove_super()
 
         self.player.x, self.player.y = self.player.coords_spawn
         for ghost in self.ghosts:
+            ghost.state = GhostState.SCATTER
             ghost.x, ghost.y = ghost.coords_spawn
 
         self.state = GameState.DEATH_PAUSE
@@ -190,14 +230,12 @@ class GameModel(BaseModel):
 
         if cell.has_pacgum:
             cell.remove_gum(is_super_gum=False)
-            # TODO insert score taken from config.json
-            self.player.score += 10
+            self.player.score += self.config_data["points_per_pacgum"]
             self.maze.total_pacgums -= 1
             
         elif cell.has_super_pacgum:
             cell.remove_gum(is_super_gum=True)
-            # TODO insert score taken from config.json
-            self.player.score += 100
+            self.player.score += self.config_data["points_per_super_pacgum"]
             self.player.super_timer = 30.0
             self._change_ghosts_state(GhostState.FRIGHTENED)
             self.maze.total_pacgums -= 1
@@ -212,6 +250,25 @@ class GameModel(BaseModel):
 
         if self.state != GameState.PLAYING or self.state == GameState.GAME_OVER:
             return
+
+        self.level_time_remaining -= dt
+
+        if self.level_time_remaining <= 0:
+            self.level_time_remaining = 0.0
+            
+            self.player.lives -= 1
+            self.player.state = PlayerState.DEAD
+            
+            if not self.player.has_lives:
+                self.state = GameState.ENTER_NAME
+            else:
+                self._reset_game()
+                self.level_time_remaining = float(self.config_data.get("level_max_time", 90))
+            return
+
+        if self.level_time_remaining < self.config_data["level_max_time"] - 7:
+            self._change_ghosts_state(GhostState.CHASE)
+
 
         self._handle_steering(self.player, dt)
         self._apply_movement(self.player, dt)
@@ -243,11 +300,10 @@ class GameModel(BaseModel):
                 
                 if self.player.is_super and not collided_ghost.state != GhostState.FRIGHTENED:
                     # Pac-Man mangia il fantasma
-                    self.player.score += 200
+                    self.player.score += self.config_data["points_per_ghost"]
                     collided_ghost.state = GhostState.EATEN
                 
                 elif self.player.is_super and collided_ghost.state != GhostState.CHASE: 
-                    print("mannaggia al clero")
                     self.player.lives -= 1
                     self.player.state = PlayerState.DEAD
 
@@ -266,19 +322,11 @@ class GameModel(BaseModel):
                     else:
                         self._reset_game()
 
-
-        if self.state == GameState.START_MENU:
-            self._load_level(w=7, h=7, is_first=True)
-
-        # ====================================================================
         elif self.maze.finish_pacgums():
             self.state = GameState.DEATH_PAUSE
-            self._load_level(9, 9)
-            # TODO
-            # mandare al livello successivo.
-            # se finiti i livelli o vite
+            self.current_level_index += 1
+            self._load_level(is_first=False)
             return 0
-        # ====================================================================
 
         if (
             hasattr(self.player, 'super_timer')

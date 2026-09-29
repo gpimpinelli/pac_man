@@ -410,7 +410,7 @@ class GameView:
 
         game_info = [
             f"Score: {model.player.score}",
-            "Lives: " + model.player.lives * "<3 "  
+            "Lives: " + model.player.lives * "<3 "
         ]
         
         self.print_game_info(

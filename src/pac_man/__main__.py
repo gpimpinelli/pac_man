@@ -1,5 +1,6 @@
 import sys
 from .config_parser import ConfigParser
+from .controller import GameController
 from mazegenerator import MazeGenerator
 
 # MazeGenerator(
@@ -16,8 +17,10 @@ def main() -> None:
         print("Invalid number of argv")
         return 1
     
-    config_data = ConfigParser(path=argv[1])
-    print(config_data.data)
+    config = ConfigParser(path=argv[1])
+
+    game = GameController(config_data=config.data)
+    game.run()
     
     #maze = MazeGenerator(seed=42)
     #repr(maze)
