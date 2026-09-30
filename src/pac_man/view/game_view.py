@@ -41,10 +41,6 @@ class GameView:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         sprites_dir = os.path.join(current_dir, "sprites")
 
-        # Rimuovi la definizione di sprite_w, sprite_h. Non servono più!
-
-        # Creiamo un helper che accetta il nome, unisce il path, 
-        # lo codifica e restituisce SOLO il puntatore dell'immagine [0]
         def load_sprite(filename: str):
             # Sostituisce l'estensione .png con .xpm
             base_name = os.path.splitext(filename)[0]
@@ -127,6 +123,15 @@ class GameView:
             view_h=minimap_size,
             tile_size=10
         )
+
+        mini_sprites_dir = os.path.join(sprites_dir, "mini")
+        
+        def load_mini_sprite(filename: str):
+            path = os.path.join(mini_sprites_dir, filename)
+            return self.m.mlx_xpm_file_to_image(self.mlx_ptr, path)[0]
+
+        self.mini_pacman = load_mini_sprite("pacman_right.xpm")
+        self.mini_ghost_red = load_mini_sprite("red_up.xpm")
 
 
         self._last_frame_key: object = None
@@ -368,6 +373,74 @@ class GameView:
                 line
             )
 
+    def draw_main_sprites(self, model: GameModel) -> None:
+        """Disegna gli sprites principali passando l'offset come parametro."""
+        
+        # Corretta la logica: se NON siamo in gioco, esci.
+        if model.state not in (GameState.PLAYING, GameState.DEATH_PAUSE):
+            return
+        
+        offset = 16
+        # 1. Stampa di Pac-Man
+        default_pacman = self.pacman_sprites[Direction.RIGHT]
+        current_pacman_sprite = self.pacman_sprites.get(model.player.current_dir, default_pacman)
+        
+        px = int(model.player.x + self.main_renderer.offset_x) - offset
+        py = int(model.player.y + self.main_renderer.offset_y) - offset
+        
+        self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, current_pacman_sprite, px, py)
+
+        # 2. Stampa dei 4 Fantasmi
+        for i, ghost in enumerate(model.ghosts):
+            gx = int(ghost.x + self.main_renderer.offset_x) - offset
+            gy = int(ghost.y + self.main_renderer.offset_y) - offset
+            
+            current_ghost_sprite = None
+
+            if ghost.state in (GhostState.CHASE, GhostState.SCATTER):
+                g_dir = ghost.current_dir if ghost.current_dir else Direction.UP
+                current_ghost_sprite = self.ghost_normal_sprites[i][g_dir]
+
+            elif ghost.state == GhostState.FRIGHTENED:
+                current_ghost_sprite = self.sprite_frightened
+
+            elif ghost.state == GhostState.EATEN:
+                current_ghost_sprite = self.sprite_eaten
+
+            if current_ghost_sprite:
+                self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, current_ghost_sprite, gx, gy)
+
+    def draw_minimap_sprites(self, model: GameModel) -> None:
+        """Disegna i mini-sprites sulla minimappa usando le proporzioni corrette."""
+        if model.state not in (GameState.PLAYING, GameState.DEATH_PAUSE):
+            return
+
+        # Calcola la proporzione tra minimappa (10) e mappa vera (32)
+        ratio = self.minimap_renderer.tile_size / self.main_renderer.tile_size
+        
+        # Offset per centrare il mini-sprite da 10x10 (metà = 5)
+        offset = 5 
+
+        # 1. Mini Pac-Man
+        # Moltiplichiamo la x/y vera per il ratio per ottenere i pixel scalati
+        mini_px = int(self.minimap_renderer.offset_x + (model.player.x * ratio))
+        mini_py = int(self.minimap_renderer.offset_y + (model.player.y * ratio))
+        
+        self.m.mlx_put_image_to_window(
+            self.mlx_ptr, self.win_ptr, self.mini_pacman, mini_px - offset, mini_py - offset
+        )
+
+        # 2. Mini Fantasmi
+        for ghost in model.ghosts:
+            mini_gx = int(self.minimap_renderer.offset_x + (ghost.x * ratio))
+            mini_gy = int(self.minimap_renderer.offset_y + (ghost.y * ratio))
+            
+            # Qui puoi aggiungere la logica per cambiare sprite se il fantasma è EATEN o FRIGHTENED
+            current_mini = self.mini_ghost_red
+            
+            self.m.mlx_put_image_to_window(
+                self.mlx_ptr, self.win_ptr, current_mini, mini_gx - offset, mini_gy - offset
+            )
 
     def render(self, model: GameModel) -> None:
         """Extract data from the Model and render it to the window."""
@@ -416,9 +489,7 @@ class GameView:
 
         # 3. Disegna minimappa
         self.minimap_renderer.draw_maze(model.maze)
-        self.position_in_minimap(
-            model.player.x, model.player.y, model.size, model.player.color
-        )
+
         for ghost in model.ghosts:
             self.position_in_minimap(ghost.x, ghost.y, model.size, ghost.color)
 
@@ -443,6 +514,9 @@ class GameView:
             )
 
         self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.img, 0, 0)
+
+        self.draw_main_sprites(model)
+        self.draw_minimap_sprites(model)
 
         if model.state in (
             GameState.START_MENU,
@@ -488,36 +562,3 @@ class GameView:
                 heart_x_start + i * (heart_size + 4),
                 heart_y
             )
-
-        if model.state in (GameState.PLAYING, GameState.DEATH_PAUSE):
-            offset = 16  # Offset per centrare lo sprite (metà di 32px)
-
-            # 1. Stampa di Pac-Man
-            default_pacman = self.pacman_sprites[Direction.RIGHT]
-            current_pacman_sprite = self.pacman_sprites.get(model.player.current_dir, default_pacman)
-            
-            px = int(model.player.x + self.main_renderer.offset_x) - offset
-            py = int(model.player.y + self.main_renderer.offset_y) - offset
-            
-            self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, current_pacman_sprite, px, py)
-
-            # 2. Stampa dei 4 Fantasmi
-            for i, ghost in enumerate(model.ghosts):
-                gx = int(ghost.x + self.main_renderer.offset_x) - offset
-                gy = int(ghost.y + self.main_renderer.offset_y) - offset
-                
-                current_ghost_sprite = None
-
-                if ghost.state in (GhostState.CHASE, GhostState.SCATTER):
-                    g_dir = ghost.current_dir if ghost.current_dir else Direction.UP
-                    current_ghost_sprite = self.ghost_normal_sprites[i][g_dir]
-
-                elif ghost.state == GhostState.FRIGHTENED:
-                    current_ghost_sprite = self.sprite_frightened
-
-                elif ghost.state == GhostState.EATEN:
-                    current_ghost_sprite = self.sprite_eaten
-
-                if current_ghost_sprite:
-                    self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, current_ghost_sprite, gx, gy)
-
