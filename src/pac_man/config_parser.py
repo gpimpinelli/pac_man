@@ -58,9 +58,21 @@ class ConfigParser(BaseModel):
                     if not clean_line:
                         continue
                     lines.append(clean_line)
-                self.data = json.loads("\n".join(lines))
+            content = "\n".join(lines)
+            if not content:
+                print(
+                    "[CONFIG WARNING] Config file is empty, "
+                    "using all default values."
+                )
+                self.data = {}
+            else:
+                self.data = json.loads(content)
         except json.JSONDecodeError as e:
-            raise ValueError(f"Error parsing JSON: {e}")
+            print(
+                f"[CONFIG WARNING] Error parsing JSON: {e}. "
+                "Using all default values."
+            )
+            self.data = {}
 
         self._validate_config()
 
