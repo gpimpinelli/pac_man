@@ -406,11 +406,16 @@ class GameView:
 
         game_info = [
             f"Score: {model.player.score}",
-            "Lives: " + model.player.lives * "<3 "
+            "Lives: " + model.player.lives * "<3 ",
+            f"Level: {model.current_level_index}"
         ]
         
+        minimap_pixel_height = model.maze.height * self.minimap_renderer.tile_size
+        
+        actual_bottom_y = self.minimap_renderer.offset_y + minimap_pixel_height
+
         self.print_game_info(
             x=self.minimap_renderer.view_x,
-            y=self.minimap_renderer.view_y + self.minimap_renderer.view_h + 20,
+            y=actual_bottom_y + 20,
             text=game_info
         )
