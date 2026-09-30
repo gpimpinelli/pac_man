@@ -77,6 +77,9 @@ class GameView:
         # 3. Carica gli sprites speciali
         self.sprite_frightened = load_sprite("ghost_eaten.xpm") 
         self.sprite_eaten = load_sprite("42.xpm")
+        
+        # 4. Load heart sprite
+        self.sprite_heart = load_sprite("heart.xpm")
 
         # mlx_new_window: Create a new window on the screen
         self.win_ptr = self.m.mlx_new_window(
@@ -460,7 +463,6 @@ class GameView:
 
         game_info = [
             f"Score: {model.player.score}",
-            "Lives: " + model.player.lives * "<3 ",
             f"Level: {model.current_level_index}"
         ]
         
@@ -473,6 +475,20 @@ class GameView:
             y=actual_bottom_y + 20,
             text=game_info
         )
+        
+        # Draw Heart sprites in the game background
+        heart_x_start = self.minimap_renderer.view_x + 10
+        heart_y = actual_bottom_y + 20 + 20 + 20 * 1
+        heart_size = 16
+        for i in range(model.player.lives):
+            self.m.mlx_put_image_to_window(
+                self.mlx_ptr,
+                self.win_ptr,
+                self.sprite_heart,
+                heart_x_start + i * (heart_size + 4),
+                heart_y
+            )
+
         if model.state in (GameState.PLAYING, GameState.DEATH_PAUSE):
             offset = 16  # Offset per centrare lo sprite (metà di 32px)
 
