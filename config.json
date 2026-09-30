@@ -9,6 +9,7 @@
     "points_per_ghost": 200,
      
     "levels": [
+        { "width": 27, "height": 27 },
         { "width": 15, "height": 15 },
         { "width": 15, "height": 15 },
         { "width": 17, "height": 17 },
@@ -18,7 +19,6 @@
         { "width": 21, "height": 21 },
         { "width": 21, "height": 21 },
         { "width": 23, "height": 23 },
-        { "width": 25, "height": 25 },
-        { "width": 27, "height": 27 }
+        { "width": 25, "height": 25 }
     ]
 }
