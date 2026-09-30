@@ -375,13 +375,11 @@ class GameView:
 
     def draw_main_sprites(self, model: GameModel) -> None:
         """Disegna gli sprites principali passando l'offset come parametro."""
-        
-        # Corretta la logica: se NON siamo in gioco, esci.
+
         if model.state not in (GameState.PLAYING, GameState.DEATH_PAUSE):
             return
         
         offset = 16
-        # 1. Stampa di Pac-Man
         default_pacman = self.pacman_sprites[Direction.RIGHT]
         current_pacman_sprite = self.pacman_sprites.get(model.player.current_dir, default_pacman)
         
@@ -405,7 +403,6 @@ class GameView:
                 current_ghost_sprite = self.sprite_frightened
 
             elif ghost.state == GhostState.EATEN:
-                # TODO problema nello sprites eaten
                 current_ghost_sprite = self.sprite_eaten
 
             if current_ghost_sprite:
