@@ -205,20 +205,21 @@ class GameModel(BaseModel):
             ghost.desired_dir = None
 
 
-    def _check_entity_collisions(self) -> int:
+    def _check_entity_collisions(self) -> list[int]:
         """Check if entitis collides"""
         hitbox_radius = self.tile_size * 0.25
 
         i = 0
+        collisions_detected: list[int] = []
         while i < len(self.ghosts):
             dist = math.dist(
                 (self.player.x, self.player.y),
                 (self.ghosts[i].x, self.ghosts[i].y)
             )
             if dist <= hitbox_radius:
-                return (i)
+                collisions_detected.append(i)
             i += 1
-        return -1
+        return collisions_detected
 
     def _check_and_eat_gum(self) -> None:
         """Check the current cell and eat the pac gum"""
@@ -295,38 +296,40 @@ class GameModel(BaseModel):
 
         self._check_and_eat_gum()
 
-        ghost_index = self._check_entity_collisions()
+        collisions_detected: list[int] = self._check_entity_collisions()
+        for ghost_index in collisions_detected:
+            if self.player.state == PlayerState.DEAD:
+                break
 
-        if ghost_index != -1:
             collided_ghost = self.ghosts[ghost_index]
-            if collided_ghost.state != GhostState.EATEN:
-                
-                if self.player.is_super and not collided_ghost.state in (GhostState.SCATTER, GhostState.CHASE):
-                    # Pac-Man mangia il fantasma
-                    self.player.multiplicator = 1.5
-                    self.player.score += int(self.config_data["points_per_ghost"] * self.player.multiplicator)
-                    collided_ghost.state = GhostState.EATEN
-                
-                elif self.player.is_super and collided_ghost.state != GhostState.CHASE: 
-                    self.player.lives -= 1
-                    self.player.state = PlayerState.DEAD
+            if collided_ghost.state == GhostState.EATEN:
+                continue
 
-                    if not self.player.has_lives:
-                        self.state = GameState.ENTER_NAME
-                    else:
-                        self._reset_game()
-
+            if self.player.is_super and collided_ghost.state not in (GhostState.SCATTER, GhostState.CHASE):
+                # Pac-Man mangia il fantasma
+                self.player.multiplicator = 1.5
+                self.player.score += int(self.config_data["points_per_ghost"] * self.player.multiplicator)
+                collided_ghost.state = GhostState.EATEN
+            
+            elif self.player.is_super and collided_ghost.state != GhostState.CHASE: 
+                self.player.lives -= 1
+                self.player.state = PlayerState.DEAD
+                if not self.player.has_lives:
+                    self.state = GameState.ENTER_NAME
                 else:
-                    # Il fantasma mangia Pac-Man
-                    self.player.lives -= 1
-                    self.player.state = PlayerState.DEAD
+                    self._reset_game()
 
-                    if not self.player.has_lives:
-                        self.state = GameState.ENTER_NAME
-                    else:
-                        self._reset_game()
+            else:
+                # Il fantasma mangia Pac-Man
+                self.player.lives -= 1
+                self.player.state = PlayerState.DEAD
+                if not self.player.has_lives:
+                    self.state = GameState.ENTER_NAME
+                else:
+                    self._reset_game()
+                break
 
-        elif self.maze.finish_pacgums():
+        if self.maze.finish_pacgums():
             self.state = GameState.DEATH_PAUSE
             self.current_level_index += 1
             self._load_level(is_first=False)

@@ -405,6 +405,7 @@ class GameView:
                 current_ghost_sprite = self.sprite_frightened
 
             elif ghost.state == GhostState.EATEN:
+                # TODO problema nello sprites eaten
                 current_ghost_sprite = self.sprite_eaten
 
             if current_ghost_sprite:
