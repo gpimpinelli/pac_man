@@ -160,7 +160,7 @@ class GameView:
                 text_color = Colors.TEXT_WHITE
 
             if current_state == GameState.ENTER_NAME and i == 1:
-                text_color = Colors.TEXT_DARK
+                text_color = Colors.TEXT_WHITE
 
             text_width = len(btn.name) * 10
             text_x = btn.x + ((btn.w - text_width) // 2)
@@ -452,7 +452,7 @@ class GameView:
         
         x = (self.config.width - sprite_width) // 2
         
-        y = self.config.height // 2 - (sprite_height // 2) - 125
+        y = self.config.height // 2 - (sprite_height // 2) - 185
 
         self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.sprite_gameover, x, y)
 
