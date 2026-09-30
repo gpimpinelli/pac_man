@@ -4,12 +4,15 @@ Pac-Man clone using the MiniLibX (mlx) library.
 This module implements a basic Pac-Man style movement engine utilizing
 the Model-View-Controller (MVC) architectural pattern, enhanced with Pydantic.
 """
+import os
 import mlx
 from typing import Any
 from .colors import Colors
 from .renderer import Renderer
 from dataclasses import dataclass
-from ..model import GameModel, GameState, HighscoreManager
+from ..model import GameModel, GameState, HighscoreManager, Direction
+from src.pac_man.model.entity import GhostState
+
 
 
 @dataclass
@@ -34,7 +37,47 @@ class GameView:
         
         # mlx_init: Establish a connection to the X-Server
         self.mlx_ptr = self.m.mlx_init()
-        
+
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        sprites_dir = os.path.join(current_dir, "sprites")
+
+        # Rimuovi la definizione di sprite_w, sprite_h. Non servono più!
+
+        # Creiamo un helper che accetta il nome, unisce il path, 
+        # lo codifica e restituisce SOLO il puntatore dell'immagine [0]
+        def load_sprite(filename: str):
+            # Sostituisce l'estensione .png con .xpm
+            base_name = os.path.splitext(filename)[0]
+            path = os.path.join(sprites_dir, f"{base_name}.xpm")
+            
+            # Usa la funzione XPM del wrapper
+            return self.m.mlx_xpm_file_to_image(self.mlx_ptr, path)[0]
+
+        # 1. Carica Pac-Man
+        self.pacman_sprites = {
+            Direction.UP: load_sprite("pacman_up.xpm"),
+            Direction.DOWN: load_sprite("pacman_down.xpm"),
+            Direction.LEFT: load_sprite("pacman_left.xpm"),
+            Direction.RIGHT: load_sprite("pacman_right.xpm"),
+        }
+
+        ghost_colors = ["red", "pink", "blu", "orange"]
+        self.ghost_normal_sprites = []
+
+        # 2. Carica i 4 fantasmi (nota l'uso della 'f' per interpolare la stringa)
+        for color in ghost_colors:
+            sprites_per_dir = {
+                Direction.UP: load_sprite(f"{color}_up.xpm"),
+                Direction.DOWN: load_sprite(f"{color}_down.xpm"),
+                Direction.LEFT: load_sprite(f"{color}_left.xpm"),
+                Direction.RIGHT: load_sprite(f"{color}_right.xpm"),
+            }
+            self.ghost_normal_sprites.append(sprites_per_dir)
+
+        # 3. Carica gli sprites speciali
+        self.sprite_frightened = load_sprite("ghost_eaten.xpm") 
+        self.sprite_eaten = load_sprite("42.xpm")
+
         # mlx_new_window: Create a new window on the screen
         self.win_ptr = self.m.mlx_new_window(
             self.mlx_ptr,
@@ -82,6 +125,7 @@ class GameView:
             tile_size=10
         )
 
+
         self._last_frame_key: object = None
 
     def _background_menu(
@@ -117,6 +161,8 @@ class GameView:
                 self.win_ptr, 
                 text_x, 
                 text_y, 
+        # Creiamo un helper che accetta il nome, unisce il path, 
+        # lo codifica e restituisce SOLO il puntatore dell'immagine [0]
                 text_color, 
                 btn.name
             )
@@ -127,6 +173,8 @@ class GameView:
     ) -> None:
         """Disegna solo lo sfondo del menu highscores nel buffer dell'immagine."""
         self.active_buttons.clear()
+        # Creiamo un helper che accetta il nome, unisce il path, 
+        # lo codifica e restituisce SOLO il puntatore dell'immagine [0]
 
         padding_menu: tuple[int, int] = (w // 4, h // 4)
         self._background_menu(padding_menu, w, h, Colors.MENU_BG)
@@ -239,6 +287,8 @@ class GameView:
             )
             self.active_buttons.append(new_button)
 
+        # Creiamo un helper che accetta il nome, unisce il path, 
+        # lo codifica e restituisce SOLO il puntatore dell'immagine [0]
     def clear(self) -> None:
         """Wipe the screen buffer instantly 
          using a pre-calculated byte array."""
@@ -262,6 +312,8 @@ class GameView:
         
         if actual_w <= 0 or y1 <= y0:
             return
+        # Creiamo un helper che accetta il nome, unisce il path, 
+        # lo codifica e restituisce SOLO il puntatore dell'immagine [0]
 
         row_bytes = bytes([b_ch, g_ch, r_ch, 0xFF] * actual_w)
         row_len = actual_w * self.bytes_per_pixel
@@ -316,6 +368,7 @@ class GameView:
 
     def render(self, model: GameModel) -> None:
         """Extract data from the Model and render it to the window."""
+
         static_states = (
             GameState.START_MENU,
             GameState.GAME_OVER,
@@ -356,6 +409,7 @@ class GameView:
                 model.size,
                 ghost.color,
             )
+
 
         # 3. Disegna minimappa
         self.minimap_renderer.draw_maze(model.maze)
@@ -419,3 +473,35 @@ class GameView:
             y=actual_bottom_y + 20,
             text=game_info
         )
+        if model.state in (GameState.PLAYING, GameState.DEATH_PAUSE):
+            offset = 16  # Offset per centrare lo sprite (metà di 32px)
+
+            # 1. Stampa di Pac-Man
+            default_pacman = self.pacman_sprites[Direction.RIGHT]
+            current_pacman_sprite = self.pacman_sprites.get(model.player.current_dir, default_pacman)
+            
+            px = int(model.player.x + self.main_renderer.offset_x) - offset
+            py = int(model.player.y + self.main_renderer.offset_y) - offset
+            
+            self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, current_pacman_sprite, px, py)
+
+            # 2. Stampa dei 4 Fantasmi
+            for i, ghost in enumerate(model.ghosts):
+                gx = int(ghost.x + self.main_renderer.offset_x) - offset
+                gy = int(ghost.y + self.main_renderer.offset_y) - offset
+                
+                current_ghost_sprite = None
+
+                if ghost.state in (GhostState.CHASE, GhostState.SCATTER):
+                    g_dir = ghost.current_dir if ghost.current_dir else Direction.UP
+                    current_ghost_sprite = self.ghost_normal_sprites[i][g_dir]
+
+                elif ghost.state == GhostState.FRIGHTENED:
+                    current_ghost_sprite = self.sprite_frightened
+
+                elif ghost.state == GhostState.EATEN:
+                    current_ghost_sprite = self.sprite_eaten
+
+                if current_ghost_sprite:
+                    self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, current_ghost_sprite, gx, gy)
+

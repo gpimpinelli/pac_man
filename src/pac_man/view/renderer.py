@@ -14,7 +14,7 @@ class Renderer:
         view_y: int = 0,
         view_w: int = None,
         view_h: int = None,
-        tile_size: int = 32
+        tile_size: int = 36
     ) -> None:
         self.view: "GameView" = view
         

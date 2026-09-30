@@ -1,6 +1,7 @@
 from typing import Optional
 from .direction import Direction
 from abc import ABC, abstractmethod
+from src.pac_man.view import Colors
 from pydantic import BaseModel, Field, ConfigDict
 
 
@@ -13,7 +14,7 @@ class Entity(BaseModel, ABC):
     current_dir: Optional[Direction] = None
     desired_dir: Optional[Direction] = None
     coords_spawn: tuple[int, int] = (0, 0)
-    color: int = Field(default=0xFFFFFF)
+    color: int = Field(default=Colors.BACKGROUND)
     
     model_config = ConfigDict(validate_assignment=False)
 

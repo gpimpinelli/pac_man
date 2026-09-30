@@ -1,6 +1,7 @@
 import math
 import random
 from typing import Any
+from ..view import Colors
 from enum import Enum, auto
 from .maze_adapter import Cell, MazeAdapter
 from .highscores import HighscoreManager
@@ -8,7 +9,7 @@ from src.pac_man.utils import pixel_to_cell, cell_to_pixel
 from pydantic import BaseModel, ConfigDict, model_validator, Field
 from .entity import Ghost, GhostState, Player, PlayerState, Direction, Entity
 
-COLORS = [0xFF0000, 0xFFB8FF, 0x00FFFF, 0xFFB852]
+COLORS = [Colors.BACKGROUND, Colors.BACKGROUND, Colors.BACKGROUND, Colors.BACKGROUND]
 
 class GameState(Enum):
     START_MENU = auto()
