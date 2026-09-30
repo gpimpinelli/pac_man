@@ -150,7 +150,7 @@ class GameModel(BaseModel):
             return ("RETRY", "MAIN MENU", "EXIT")
         elif self.state == GameState.ENTER_NAME:
             display_name = self.name_input if self.name_input else "Insert Name"
-            return ("GAME OVER", display_name, "SAVE SCORE")
+            return ("", display_name, "SAVE SCORE")
         elif self.state in (GameState.HIGHSCORES, GameState.INSTRUCTIONS):
             return ("ENTER TO GO BACK",)
         return ()

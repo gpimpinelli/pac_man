@@ -77,6 +77,8 @@ class GameView:
         # 4. Load heart sprite
         self.sprite_heart = load_sprite("heart.xpm")
 
+        self.sprite_gameover = load_sprite("gameover.xpm")
+
         # mlx_new_window: Create a new window on the screen
         self.win_ptr = self.m.mlx_new_window(
             self.mlx_ptr,
@@ -184,7 +186,7 @@ class GameView:
         # Creiamo un helper che accetta il nome, unisce il path, 
         # lo codifica e restituisce SOLO il puntatore dell'immagine [0]
 
-        padding_menu: tuple[int, int] = (w // 4, h // 4)
+        padding_menu: tuple[int, int] = (230, 230)
         self._background_menu(padding_menu, w, h, Colors.MENU_BG)
 
         menu_w = w - (padding_menu[0] * 2)
@@ -206,7 +208,7 @@ class GameView:
 
     def draw_text(self, w: int, h: int, text: list[str], is_highscores: bool = False) -> None:
         """Disegna il testo centrato direttamente sulla finestra (dopo il put_image)."""
-        padding_menu: tuple[int, int] = (w // 4, h // 4)
+        padding_menu: tuple[int, int] = (230, 230)
         menu_w = w - (padding_menu[0] * 2)
         menu_h = h - (padding_menu[1] * 2)
 
@@ -244,7 +246,7 @@ class GameView:
         
         self.active_buttons.clear()
             
-        padding_menu: tuple[int, int] = (w // 4, h // 4)
+        padding_menu: tuple[int, int] = (230, 230)
         self._background_menu(padding_menu, w, h, Colors.BACKGROUND)
         
         menu_x = padding_menu[0]
@@ -295,8 +297,6 @@ class GameView:
             )
             self.active_buttons.append(new_button)
 
-        # Creiamo un helper che accetta il nome, unisce il path, 
-        # lo codifica e restituisce SOLO il puntatore dell'immagine [0]
     def clear(self) -> None:
         """Wipe the screen buffer instantly 
          using a pre-calculated byte array."""
@@ -440,6 +440,22 @@ class GameView:
                 self.mlx_ptr, self.win_ptr, current_mini, mini_gx - offset, mini_gy - offset
             )
 
+    def draw_gameover_sprite(self, model: GameModel) -> None:
+        """Disegna il logo di Game Over centrato nella parte alta dello schermo."""
+        
+        # Il Game Over appare in due stati: quando inserisci il nome e nel menu finale
+        if model.state not in (GameState.GAME_OVER, GameState.ENTER_NAME):
+            return
+
+        sprite_width = 300  
+        sprite_height = 129 
+        
+        x = (self.config.width - sprite_width) // 2
+        
+        y = self.config.height // 2 - (sprite_height // 2) - 125
+
+        self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.sprite_gameover, x, y)
+
     def render(self, model: GameModel) -> None:
         """Extract data from the Model and render it to the window."""
 
@@ -515,6 +531,7 @@ class GameView:
 
         self.draw_main_sprites(model)
         self.draw_minimap_sprites(model)
+        self.draw_gameover_sprite(model)
 
         if model.state in (
             GameState.START_MENU,
