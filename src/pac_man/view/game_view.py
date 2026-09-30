@@ -531,7 +531,8 @@ class GameView:
 
         self.draw_main_sprites(model)
         self.draw_minimap_sprites(model)
-        self.draw_gameover_sprite(model)
+        if model.state == GameState.ENTER_NAME:
+            self.draw_gameover_sprite(model)
 
         if model.state in (
             GameState.START_MENU,

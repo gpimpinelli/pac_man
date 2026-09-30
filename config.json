@@ -1,6 +1,6 @@
 {
     "highscore_filename": "highscores.json",
-    "lives": 1, // da rivedere
+    "lives": 0, // da rivedere
     "seed": 42, //inserire var bool nel primo livello
     "level_max_time": 180, // inserire time
 

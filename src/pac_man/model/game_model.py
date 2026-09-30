@@ -207,7 +207,7 @@ class GameModel(BaseModel):
 
     def _check_entity_collisions(self) -> list[int]:
         """Check if entitis collides"""
-        hitbox_radius = self.tile_size * 0.25
+        hitbox_radius = self.tile_size * 0.4
 
         i = 0
         collisions_detected: list[int] = []
