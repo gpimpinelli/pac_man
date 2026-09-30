@@ -1,5 +1,5 @@
-from .game_view import GameView, rgb_to_mlx
+from .game_view import GameView
 from .renderer import Renderer
 
 
-__all__ = ["GameView", "rgb_to_mlx"]
+__all__ = ["GameView"]

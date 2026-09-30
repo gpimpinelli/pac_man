@@ -6,13 +6,10 @@ the Model-View-Controller (MVC) architectural pattern, enhanced with Pydantic.
 """
 import mlx
 from typing import Any
+from .colors import Colors
 from .renderer import Renderer
 from dataclasses import dataclass
 from ..model import GameModel, GameState, HighscoreManager
-
-def rgb_to_mlx(r: int, g: int, b: int) -> int:
-    """Convert RGB (0-255) color channels to a 24-bit MLX integer color."""
-    return (r << 16) | (g << 8) | b
 
 
 @dataclass
@@ -41,7 +38,7 @@ class GameView:
         # mlx_new_window: Create a new window on the screen
         self.win_ptr = self.m.mlx_new_window(
             self.mlx_ptr,
-            self.config.width,
+            self.config.width,+
             self.config.height,
             self.config.title
         )
@@ -59,11 +56,15 @@ class GameView:
         self.bytes_per_pixel = self.bfp // 8
         self.buffer_size = self.config.height * self.size_line
         
-        # Background buffer cache (Night Blue)
-        bg_bytes = bytes([0x22, 0x05, 0x05, 0xFF])
-        self._bg_buffer = bg_bytes * (self.buffer_size // self.bytes_per_pixel)
+        bg_color = Colors.BACKGROUND
         
-        # 1. Renderer Principale (a tutto schermo)
+        b_ch = bg_color & 0xFF
+        g_ch = (bg_color >> 8) & 0xFF
+        r_ch = (bg_color >> 16) & 0xFF
+        
+        bg_bytes = bytes([b_ch, g_ch, r_ch, 0xFF])
+        self._bg_buffer = bg_bytes * (self.buffer_size // self.bytes_per_pixel)
+
         self.main_renderer = Renderer(self)
 
         self.active_buttons: list[MenuButton] = []
@@ -84,7 +85,7 @@ class GameView:
         self._last_frame_key: object = None
 
     def _background_menu(
-        self, padding: tuple[int, int], w: int, h: int, color: int=0x222222
+        self, padding: tuple[int, int], w: int, h: int, color: int=Colors.BACKGROUND
     ) -> None:
         new_w = w - (padding[0] * 2)
         new_h = h - (padding[1] * 2)
@@ -99,13 +100,13 @@ class GameView:
     def draw_button(self, current_state: GameState) -> None:
         
         for i, btn in enumerate(self.active_buttons):
-            text_color = 0xFFFFFF
+            text_color = Colors.TEXT_WHITE
             
             if current_state == GameState.ENTER_NAME and i == 0:
-                text_color = 0x000000
+                text_color = Colors.TEXT_WHITE
 
             if current_state == GameState.ENTER_NAME and i == 1:
-                text_color = 0x333333 
+                text_color = Colors.TEXT_DARK
 
             text_width = len(btn.name) * 10
             text_x = btn.x + ((btn.w - text_width) // 2)
@@ -128,7 +129,7 @@ class GameView:
         self.active_buttons.clear()
 
         padding_menu: tuple[int, int] = (w // 4, h // 4)
-        self._background_menu(padding_menu, w, h, 0x888888)
+        self._background_menu(padding_menu, w, h, Colors.MENU_BG)
 
         menu_w = w - (padding_menu[0] * 2)
         menu_h = h - (padding_menu[1] * 2)
@@ -141,7 +142,7 @@ class GameView:
             coords=(btn_x, btn_y),
             w=btn_w,
             h=btn_h, 
-            color=0x555555
+            color=Colors.BUTTON_NORMAL
         )
         self.active_buttons.append(
             MenuButton(name=button_lst[0], x=btn_x, y=btn_y, w=btn_w, h=btn_h)
@@ -172,7 +173,7 @@ class GameView:
                 self.win_ptr,
                 text_x,
                 text_y,
-                0xFFFFFF,
+                Colors.TEXT_WHITE,
                 line
             )
 
@@ -188,7 +189,7 @@ class GameView:
         self.active_buttons.clear()
             
         padding_menu: tuple[int, int] = (w // 4, h // 4)
-        self._background_menu(padding_menu, w, h, 0xFFB8FF)
+        self._background_menu(padding_menu, w, h, Colors.BACKGROUND)
         
         menu_x = padding_menu[0]
         menu_y = padding_menu[1]
@@ -200,7 +201,7 @@ class GameView:
         btn_w = 200
         btn_h = 50
         gap = 20
-        btn_color = 0x555555
+
         
         total_block_height = (num_buttons * btn_h) + ((num_buttons - 1) * gap)
         start_x = menu_x + ((menu_w - btn_w) // 2)
@@ -210,16 +211,16 @@ class GameView:
             current_y = start_y + (i * (btn_h + gap))
             
             draw_bg = True
-            color = btn_color
+            color = Colors.BUTTON_NORMAL
 
             if is_enter_name and i == 0:
                 # Non disegna il rettangolo, mostrando direttamente il rosa del menu
                 draw_bg = False
             elif is_enter_name and i == 1:
                 # Sfondo bianco per l'input; diventa leggermente grigio se selezionato
-                color = 0xFFFFFF if i != selected_index else 0xDDDDDD
+                color = Colors.BUTTON_NORMAL if i != selected_index else Colors.BUTTON_HOVER
             elif i == selected_index:
-                color = 0x888888
+                color = Colors.BUTTON_HOVER
 
             if draw_bg:
                 self.draw_rect_fast(
@@ -308,10 +309,9 @@ class GameView:
                 self.win_ptr,
                 int(x),
                 text_y,
-                0xFFFFFF,
+                Colors.TEXT_WHITE,
                 line
             )
-
 
 
     def render(self, model: GameModel) -> None:
@@ -385,10 +385,8 @@ class GameView:
                 button_lst=model.menu_options,
             )
 
-        # 5. UNICO invio a schermo di tutto il frame calcolato
         self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.img, 0, 0)
 
-        # 6. Testi vettoriali X11
         if model.state in (
             GameState.START_MENU,
             GameState.GAME_OVER,

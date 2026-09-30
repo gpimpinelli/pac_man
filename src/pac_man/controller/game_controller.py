@@ -214,7 +214,7 @@ class GameController:
                     self.model.selected_button_index = 3 - self.model.selected_button_index
 
             elif (
-                (97 <= keycode <= 122) or (48 <= keycode <= 57) or keycode == self.key.SPACE
+                (97 <= keycode <= 122) or (48 <= keycode <= 57) or keycode == self.Key.SPACE
             ):
                 # Limite di 10 caratteri per non sbordare
                 if len(self.model.name_input) < 10:

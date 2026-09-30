@@ -1,12 +1,9 @@
 from ..model import MazeAdapter
+from .colors import Colors
 from src.pac_man.utils import cell_to_pixel, center_in_pixel
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .game_view import GameView
-
-COLOR_WALL = 0x2121DE
-COLOR_PACGUM = 0xFFB8AE
-COLOR_SUPER_PACGUM = 0xFFFF00
 
 
 class Renderer:
@@ -19,7 +16,6 @@ class Renderer:
         view_h: int = None,
         tile_size: int = 32
     ) -> None:
-
         self.view: "GameView" = view
         
         # Salviamo i parametri di layout della finestra per usarli dopo
@@ -64,13 +60,13 @@ class Renderer:
                 
                 if cell.is_solid:
                     draw_rect(
-                        (cx, cy), tile_size, tile_size, COLOR_WALL
+                        (cx, cy), tile_size, tile_size, Colors.MAZE_WALLS
                     )
                     continue
 
                 if cell.has_wall_north:
                     draw_rect(
-                        (cx, cy), tile_size, wall_thick, COLOR_WALL
+                        (cx, cy), tile_size, wall_thick, Colors.MAZE_WALLS
                     )
                 if cell.has_wall_south:
                     draw_rect(
@@ -78,11 +74,11 @@ class Renderer:
                         cy + tile_size - wall_thick),
                         tile_size,
                         wall_thick,
-                        COLOR_WALL
+                        Colors.MAZE_WALLS
                     )
                 if cell.has_wall_west:
                     draw_rect(
-                        (cx, cy), wall_thick, tile_size, COLOR_WALL
+                        (cx, cy), wall_thick, tile_size, Colors.MAZE_WALLS
                     )
                 if cell.has_wall_east:
                     draw_rect(
@@ -90,20 +86,20 @@ class Renderer:
                         cy),
                         wall_thick,
                         tile_size,
-                        COLOR_WALL
+                        Colors.MAZE_WALLS
                     )
 
                 if cell.has_pacgum:
                     # max(default, value -> 1/8 of the cell)
                     size = max(2, tile_size // 8)
                     px, py = center_in_pixel((cx, cy), tile_size, size)
-                    draw_rect((px,py), size, size, COLOR_PACGUM)
+                    draw_rect((px,py), size, size, Colors.PLAYER)
                 
                 if cell.has_super_pacgum:
                     # max(default, value -> 1/8 of the cell)
                     size = max(4, tile_size // 6)
                     px, py = center_in_pixel((cx, cy), tile_size, size)
-                    draw_rect((px,py), size, size, COLOR_SUPER_PACGUM)
+                    draw_rect((px,py), size, size, Colors.UI_AND_DOTS)
 
 
     def draw_player(self, x: float, y: float, size: int, color: int) -> None:
