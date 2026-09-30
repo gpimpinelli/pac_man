@@ -15,6 +15,7 @@ class GhostState(Enum):
 class Ghost(Entity):
     state: GhostState = GhostState.SCATTER
     last_decision_cell: tuple[int, int] = (-1, -1)
+    respawn_timer: float = 0.0
 
     @property
     def is_already_eaten(self) -> bool:

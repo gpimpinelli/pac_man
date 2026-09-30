@@ -281,13 +281,23 @@ class GameModel(BaseModel):
 
         for ghost in self.ghosts:
             if ghost.state == GhostState.EATEN:
-                tolerance = ghost.speed * dt
+                if ghost.respawn_timer > 0:
+                    ghost.respawn_timer -= dt
+                    if ghost.respawn_timer <= 0:
+                        ghost.respawn_timer = 0.0
+                        ghost.state = GhostState.CHASE
+                    # until the timer is > 0, ghost state not change
+                    continue
                 
+                tolerance = max(ghost.speed * dt, 4.0)
                 if (abs(ghost.x - ghost.coords_spawn[0]) <= tolerance and 
                     abs(ghost.y - ghost.coords_spawn[1]) <= tolerance):
-                    
-                    ghost.state = GhostState.CHASE
+
                     ghost.x, ghost.y = ghost.coords_spawn
+                    ghost.current_dir = None
+                    ghost.desired_dir = None
+                    ghost.respawn_timer = 2.0
+                    continue
 
             ghost.update_intention(self)
             self._handle_steering(ghost, dt)
