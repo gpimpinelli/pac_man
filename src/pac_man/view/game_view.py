@@ -72,7 +72,7 @@ class GameView:
 
         # 3. Carica gli sprites speciali
         self.sprite_frightened = load_sprite("ghost_eaten.xpm") 
-        self.sprite_eaten = load_sprite("42.xpm")
+        self.sprite_eaten = load_sprite("eaten.xpm")
         
         # 4. Load heart sprite
         self.sprite_heart = load_sprite("heart.xpm")
