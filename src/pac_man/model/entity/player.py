@@ -9,7 +9,7 @@ class PlayerState(Enum):
 
 
 class Player(Entity):
-    lives: int = 2
+    lives: int
     score: int = 0
     multiplicator: int = 1
     super_timer: float = 0.0
@@ -26,7 +26,7 @@ class Player(Entity):
 
     @property
     def has_lives(self) -> bool:
-        return self.lives >= 0
+        return self.lives > 0
 
     def remove_super(self) -> None:
         self.super_timer = 0.0

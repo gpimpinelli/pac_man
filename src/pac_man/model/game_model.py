@@ -42,7 +42,9 @@ class GameModel(BaseModel):
 
     tile_size: int = Field(default=32)
 
-    player: Player = Field(default_factory=Player)
+    config_data: dict[str, Any] = Field(default_factory=dict)
+
+    player: Player | None = None
     ghosts: list[Ghost] = Field(default_factory=list)
 
     selected_button_index: int = 0
@@ -51,9 +53,6 @@ class GameModel(BaseModel):
     highscore_manager: HighscoreManager = Field(default_factory=HighscoreManager)
 
     name_input: str = ""
-
-    # Point
-    config_data: dict[str, Any] = Field(default_factory=dict)
 
     level_time_remaining: float = 0.0
 
@@ -75,10 +74,8 @@ class GameModel(BaseModel):
         h = levels_list[0]["height"]
         seed = self.config_data.get("seed", 42)
         
-        # Istanzia il MazeAdapter qui!
         self.maze = MazeAdapter(width=w, height=h, seed=seed)
 
-        # 3. Ora self.maze esiste: puoi leggere player_spawn in sicurezza
         spawn_x, spawn_y = cell_to_pixel(
             self.maze.player_spawn,
             (0, 0),
@@ -86,12 +83,15 @@ class GameModel(BaseModel):
         )
 
         half_tile = self.tile_size // 2
-        
+        self.player = Player(lives=(self.config_data["lives"] - 1))
+
         x_pixel = float(spawn_x + half_tile)
         y_pixel = float(spawn_y + half_tile)
         self.player.x = x_pixel
         self.player.y = y_pixel
         self.player.coords_spawn = (x_pixel, y_pixel)
+
+
 
         speed = 90 * (1.05 ** self.current_level_index)
 
