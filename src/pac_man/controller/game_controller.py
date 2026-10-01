@@ -194,7 +194,6 @@ class GameController:
                 self.model.state = GameState.CHEAT_MODE
 
         elif self.model.state == GameState.CHEAT_MODE:
-            self.model._freeze_game()
             match keycode:
                 case self.Key.ONE:
                     self.model.toggle_invincible()

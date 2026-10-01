@@ -28,12 +28,11 @@ class MenuButton:
 # ==========================================
 class GameView:
     """Handle window creation, rendering, and MLX graphical outputs."""
-    cheat = ("Press [ 6 ] for CHEAT_MODE",)
+    cheat = ("Press [ 6 ] -> CHEAT",)
 
     cheat_mode_command: str = (
         "",
         "",
-        "=== CHEAT MODE CONTROLS ===",
         "[ 1 ] Toggle Invincibility",
         "[ 2 ] Skip Current Level",
         "[ 3 ] Freeze / Unfreeze Ghosts",
@@ -177,6 +176,7 @@ ghost costs 1 life and respawns you in the center."""
 
 
         self._last_frame_key: object = None
+        self._startup_frames: int = 5
 
     def _background_menu(
         self, padding: tuple[int, int], w: int, h: int, color: int=Colors.MENU_BG
@@ -210,9 +210,7 @@ ghost costs 1 life and respawns you in the center."""
                 self.mlx_ptr, 
                 self.win_ptr, 
                 text_x, 
-                text_y, 
-        # Creiamo un helper che accetta il nome, unisce il path, 
-        # lo codifica e restituisce SOLO il puntatore dell'immagine [0]
+                text_y,
                 text_color, 
                 btn.name
             )
@@ -489,8 +487,10 @@ ghost costs 1 life and respawns you in the center."""
 
     def render(self, model: GameModel) -> None:
         """Extract data from the Model and render it to the window."""
-        minimap_pixel_height = model.maze.height * self.minimap_renderer.tile_size
-        actual_bottom_y = self.minimap_renderer.offset_y + minimap_pixel_height
+        if getattr(self, "_startup_frames", 0) > 0:
+            self._last_frame_key = None
+            self._startup_frames -= 1
+
         static_states = (
             GameState.START_MENU,
             GameState.GAME_OVER,
@@ -499,12 +499,17 @@ ghost costs 1 life and respawns you in the center."""
             GameState.INSTRUCTIONS,
             GameState.CHEAT_MODE,
         )
+
+        minimap_pixel_height = model.maze.height * self.minimap_renderer.tile_size
+        actual_bottom_y = self.minimap_renderer.offset_y + minimap_pixel_height
+        
         if model.state in static_states:
             key = (
                 self.cheat,
                 model.state,
                 model.selected_button_index,
-                model.player.is_invincible,
+                model.player.lives,
+                model.player.speed,
                 tuple(model.menu_options),
                 tuple(model.highscore_manager.top_scores_text),
             )
@@ -531,28 +536,33 @@ ghost costs 1 life and respawns you in the center."""
         # 1. Pulisci l'intero buffer di memoria
         self.clear()
 
-        # 2. Disegna maze e personaggi sul buffer principale
+        self.main_renderer.update_layout(model.maze)
+        self.minimap_renderer.update_layout(model.maze)
+
         self.main_renderer.draw_maze(model.maze)
-        self.main_renderer.draw_player(
-            model.player.x + self.main_renderer.offset_x,
-            model.player.y + self.main_renderer.offset_y,
-            model.size,
-            model.player.color,
-        )
-        for ghost in model.ghosts:
-            self.main_renderer.draw_player(
-                ghost.x + self.main_renderer.offset_x,
-                ghost.y + self.main_renderer.offset_y,
-                model.size,
-                ghost.color,
-            )
+        self.minimap_renderer.draw_maze(model.maze)
+        # 2. Disegna maze e personaggi sul buffer principale
+        # self.main_renderer.draw_maze(model.maze)
+        # self.main_renderer.draw_player(
+        #     model.player.x + self.main_renderer.offset_x,
+        #     model.player.y + self.main_renderer.offset_y,
+        #     model.size,
+        #     model.player.color,
+        # )
+        # for ghost in model.ghosts:
+        #     self.main_renderer.draw_player(
+        #         ghost.x + self.main_renderer.offset_x,
+        #         ghost.y + self.main_renderer.offset_y,
+        #         model.size,
+        #         ghost.color,
+        #     )
 
 
         # 3. Disegna minimappa
-        self.minimap_renderer.draw_maze(model.maze)
 
-        for ghost in model.ghosts:
-            self.position_in_minimap(ghost.x, ghost.y, model.size, ghost.color)
+
+        # for ghost in model.ghosts:
+        #     self.position_in_minimap(ghost.x, ghost.y, model.size, ghost.color)
 
         # 4. Menu
         if model.state in (
@@ -602,23 +612,24 @@ ghost costs 1 life and respawns you in the center."""
             )
             self.draw_button(model.state)
 
-        game_info = [
-            f"Score: {model.player.score}",
-            f"Level: {model.current_level_index + 1}",
-            f"Time: {int(model.level_time_remaining)}",
-            f"{self.cheat[0]}"
-        ]
+        if model.state not in (GameState.START_MENU, GameState.HIGHSCORES, GameState.INSTRUCTIONS):
+            
+            game_info = [
+                f"Score: {model.player.score}",
+                f"Level: {model.current_level_index + 1}",
+                f"Time: {int(model.level_time_remaining)}",
+                f"{self.cheat[0]}"
+            ]
 
-        if model.state == GameState.CHEAT_MODE:
-            size = len(self.cheat_mode_command)
-            for i in range(size):
-                game_info.append(self.cheat_mode_command[i])
-            if model.state != GameState.CHEAT_MODE:
-               for i in range(size):
-                game_info.pop(self.cheat_mode_command[i])     
+            # Espandi il testo se sei nel cheat mode
+            if model.state == GameState.CHEAT_MODE:
+                game_info.extend(self.cheat_mode_command)
 
-        self.print_game_info(
-            x=self.minimap_renderer.view_x,
-            y=actual_bottom_y + 20,
-            text=game_info
-        )
+            self.print_game_info(
+                x=self.minimap_renderer.view_x,
+                y=actual_bottom_y + 20,
+                text=game_info
+            )
+            
+        if hasattr(self.m, 'mlx_do_sync'):
+            self.m.mlx_do_sync(self.mlx_ptr)

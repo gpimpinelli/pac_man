@@ -44,7 +44,7 @@ class Renderer:
         )
 
     def draw_maze(self, maze: MazeAdapter) -> None:
-        self.update_layout(maze)
+        # self.update_layout(maze)
         # Optimization: save the method's refernce in a local variable
         draw_rect = self.view.draw_rect_fast
         # Cell dimension in pixel
@@ -103,16 +103,16 @@ class Renderer:
                     draw_rect((px,py), size, size, Colors.SUPER_PACGUM)
 
 
-    def draw_player(self, x: float, y: float, size: int, color: int) -> None:
+    # def draw_player(self, x: float, y: float, size: int, color: int) -> None:
         
-        # TRUCCO 2.5D: Spostiamo il disegno verso l'alto di 20 pixel, 
-        # ma senza alterare la vera 'y' del GameModel!
-        # offset_visivo_y = y - 20 
+    #     # TRUCCO 2.5D: Spostiamo il disegno verso l'alto di 20 pixel, 
+    #     # ma senza alterare la vera 'y' del GameModel!
+    #     # offset_visivo_y = y - 20 
         
-        self.view.draw_rect_fast(
-            (int(x) - size // 2, 
-            int(y) - size // 2),
-            size, 
-            size, 
-            color
-        )
+    #     self.view.draw_rect_fast(
+    #         (int(x) - size // 2, 
+    #         int(y) - size // 2),
+    #         size, 
+    #         size, 
+    #         color
+    #     )

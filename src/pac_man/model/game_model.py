@@ -20,6 +20,7 @@ class GameState(Enum):
     INSTRUCTIONS = auto()
     ENTER_NAME = auto()
     CHEAT_MODE = auto()
+    LEVEL_COMPLETE = auto()
 
 
 # ==========================================
@@ -55,6 +56,8 @@ class GameModel(BaseModel):
     name_input: str = ""
 
     level_time_remaining: float = 0.0
+
+    level_transition_timer: float = 0.0
 
     current_level_index: int = 9
 
@@ -254,7 +257,19 @@ class GameModel(BaseModel):
         
     def toggle_invincible(self) -> None:
         self.player.toggle_invincible()
-        print(f"[CHEAT] Invincibility: {self.player.is_invincible}")
+        # print(f"[CHEAT] Invincibility: {self.player.is_invincible}")
+
+    def _handle_player_death(self) -> None:
+        self.player.lives -= 1
+        self.player.state = PlayerState.DEAD
+        
+        if not self.player.has_lives or self.current_level_index >= len(self.config_data["levels"]):
+            self.state = GameState.ENTER_NAME
+        else:
+            self._reset_game()
+            # Riporta il tempo al massimo quando rinasci al centro
+            base_time = self.config_data.get("level_max_time", 180)
+            self.level_time_remaining = base_time * (1.05 ** self.current_level_index)
 
     def update(self, dt: float):
         """
@@ -263,25 +278,30 @@ class GameModel(BaseModel):
             dt: Delta time elapsed since the last frame, in seconds.
         """
 
-        if self.state != GameState.PLAYING or self.state == GameState.GAME_OVER:
+        if self.state not in (GameState.PLAYING, GameState.CHEAT_MODE, GameState.LEVEL_COMPLETE):
+            return
+
+        if self.state == GameState.LEVEL_COMPLETE:
+            self.level_transition_timer -= dt
+            
+            if self.level_transition_timer <= 0:
+                self.current_level_index += 1
+                if self.current_level_index >= len(self.config_data["levels"]):
+                    self.state = GameState.ENTER_NAME
+                else:
+                    self.state = GameState.DEATH_PAUSE
+                    self._load_level(is_first=False)
+            return
+        
+        if self.state in (GameState.CHEAT_MODE, GameState.INSTRUCTIONS):
+            self._freeze_game()
             return
 
         self.level_time_remaining -= dt
 
         if self.level_time_remaining <= 0:
             self.level_time_remaining = 0.0
-            
-            self.player.lives -= 1
-            self.player.state = PlayerState.DEAD
-            
-            if (
-                not self.player.has_lives
-                or self.current_level_index >= len(self.config_data["levels"])
-            ):
-                self.state = GameState.ENTER_NAME
-            else:
-                self._reset_game()
-                self.level_time_remaining = float(self.config_data.get("level_max_time", 180))
+            self._handle_player_death()
             return
 
         if self.level_time_remaining < self.config_data["level_max_time"] - 7:
@@ -300,7 +320,6 @@ class GameModel(BaseModel):
                     if ghost.respawn_timer <= 0:
                         ghost.respawn_timer = 0.0
                         ghost.state = GhostState.CHASE
-                    # until the timer is > 0, ghost state not change
                     continue
                 
                 tolerance = max(ghost.speed * dt, 4.0)
@@ -340,22 +359,14 @@ class GameModel(BaseModel):
 
             else:
                 # Il fantasma mangia Pac-Man
-                self.player.lives -= 1
-                self.player.state = PlayerState.DEAD
-                if not self.player.has_lives:
-                    self.state = GameState.ENTER_NAME
-                else:
-                    self._reset_game()
+                self._handle_player_death()
                 break
 
         if self.maze.finish_pacgums():
-            self.current_level_index += 1
-            if self.current_level_index >= len(self.config_data["levels"]):
-                self.state = GameState.ENTER_NAME
-                return 0
-            self.state = GameState.DEATH_PAUSE
-            self._load_level(is_first=False)
-            return 0
+            self._freeze_game()
+            self.level_transition_timer = 5.0
+            self.state = GameState.LEVEL_COMPLETE
+            return
 
         if (
             hasattr(self.player, 'super_timer')
