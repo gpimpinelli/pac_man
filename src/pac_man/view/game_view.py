@@ -28,7 +28,37 @@ class MenuButton:
 # ==========================================
 class GameView:
     """Handle window creation, rendering, and MLX graphical outputs."""
+    # cheat = ("Press 6 for CHEAT_MODE",)
 
+    cheat_mode_command: str = (
+        "=== CHEAT MODE CONTROLS ===",
+        "[ 1 ] Toggle Invincibility (no lives lost)",
+        "[ 2 ] Skip Current Level",
+        "[ 3 ] Freeze / Unfreeze Ghosts",
+        "[ 4 ] Add +1 Extra Life",
+        "[ 5 ] Increase Player Speed",
+        "[ 6 ] Exit Cheat Mode",
+        "Press [ WASD ] or [ ARROWS ] to resume play."
+    )
+
+    game_rules: str = (
+        """OBJECTIVE:
+Eat all the Pac-Gums in the maze to clear the level
+and advance before time runs out. Avoid the ghosts!
+
+    Move Up:    [ W ] or [ UP ARROW ]
+    Move Left:  [ A ] or [ LEFT ARROW ]
+    Move Down:  [ S ] or [ DOWN ARROW ]
+    Move Right: [ D ] or [ RIGHT ARROW ]
+    Pause/Menu: [ ESC ] or [ P ]
+
+Collect regular dots (Pac-Gums) to gain score.
+Collect corner Super Pac-Gums to turn ghosts blue!
+While blue, ghosts will flee: touch them to eat
+them and send them back to their corner!
+You start with 3 lives. Colliding with a normal 
+ghost costs 1 life and respawns you in the center."""
+    )
     def __init__(self, config: Any) -> None:
         """Initialize the MLX graphical environment using validated config."""
         self.config = config
@@ -41,6 +71,7 @@ class GameView:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         sprites_dir = os.path.join(current_dir, "sprites")
 
+     
         def load_sprite(filename: str):
             # Sostituisce l'estensione .png con .xpm
             base_name = os.path.splitext(filename)[0]
@@ -547,7 +578,7 @@ class GameView:
             if model.state == GameState.HIGHSCORES:
                 text = model.highscore_manager.top_scores_text
             else:
-                text = self.config.game_rules.split("\n")
+                text = self.game_rules.split("\n")
             self.draw_text(
                 w=self.config.width, h=self.config.height, text=text,
                 is_highscores=(model.state == GameState.HIGHSCORES)
@@ -559,7 +590,19 @@ class GameView:
             f"Level: {model.current_level_index + 1}",
             f"Time: {int(model.level_time_remaining)}"
         ]
-        
+
+        if model.state != GameState.CHEAT_MODE:
+            pass
+            # game_info.append(self.cheat[0])
+        else:
+            game_info.pop()
+            size = len(self.cheat_mode_command)
+            for i in range(size):
+                game_info.append(self.cheat_mode_command[i])
+            if model.state != GameState.CHEAT_MODE:
+               for i in range(size):
+                game_info.pop(self.cheat_mode_command[i])     
+
         minimap_pixel_height = model.maze.height * self.minimap_renderer.tile_size
         
         actual_bottom_y = self.minimap_renderer.offset_y + minimap_pixel_height

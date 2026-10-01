@@ -25,36 +25,6 @@ class GameConfig(BaseModel):
     target_fps: int = Field(
         default=60, gt=0, le=240, description="Target frames per second."
     )
-    game_rules: str = (
-        """OBJECTIVE:
-Eat all the Pac-Gums in the maze to clear the level
-and advance before time runs out. Avoid the ghosts!
-
-    Move Up:    [ W ] or [ UP ARROW ]
-    Move Left:  [ A ] or [ LEFT ARROW ]
-    Move Down:  [ S ] or [ DOWN ARROW ]
-    Move Right: [ D ] or [ RIGHT ARROW ]
-    Pause/Menu: [ ESC ] or [ P ]
-
-    Collect regular dots (Pac-Gums) to gain score.
-    Collect corner Super Pac-Gums to turn ghosts blue!
-    While blue, ghosts will flee: touch them to eat
-    them and send them back to their corner!
-    You start with 3 lives. Colliding with a normal 
-    ghost costs 1 life and respawns you in the center."""
-    )
-    cheat_mode_command: str = (
-        """=== CHEAT MODE CONTROLS ===
-
-    [ 1 ] Toggle Invincibility (no lives lost)
-    [ 2 ] Skip Current Level
-    [ 3 ] Freeze / Unfreeze Ghosts
-    [ 4 ] Add +1 Extra Life
-    [ 5 ] Increase Player Speed
-    [ 6 ] Exit Cheat Mode
-
-    Press [ WASD ] or [ ARROWS ] to resume play."""
-    )
 
 # ==========================================
 # 3. CONTROLLER (Input, Loop, and Integration)

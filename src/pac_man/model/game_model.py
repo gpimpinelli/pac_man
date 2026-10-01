@@ -83,7 +83,7 @@ class GameModel(BaseModel):
         )
 
         half_tile = self.tile_size // 2
-        speed = 90 * (1.05 ** self.current_level_index)
+        speed = 90 * (1.02 ** self.current_level_index)
         self.player = Player(lives=(self.config_data["lives"] - 1), speed= speed + 10)
 
         x_pixel = float(spawn_x + half_tile)
