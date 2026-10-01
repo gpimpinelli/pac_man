@@ -444,15 +444,10 @@ class GameView:
                 self.mlx_ptr, self.win_ptr, current_mini, mini_gx - offset, mini_gy - offset
             )
 
-    def draw_gameover_sprite(self, model: GameModel, sprites: int) -> None:
+    def draw_finish_sprite(self, model: GameModel, sprites: int) -> None:
         """Disegna il logo di Game Over centrato nella parte alta dello schermo."""
-        
-        # Il Game Over appare in due stati: quando inserisci il nome e nel menu finale
-        if model.state != GameState.ENTER_NAME:
-            return
-
         sprite_width = 300  
-        sprite_height = 129 
+        sprite_height = 129
         
         x = (self.config.width - sprite_width) // 2
         
@@ -535,10 +530,12 @@ class GameView:
 
         self.draw_main_sprites(model)
         self.draw_minimap_sprites(model)
+
         if model.state == GameState.ENTER_NAME:
-            self.draw_gameover_sprite(model, self.sprite_gameover)
-        elif model.current_level_index == 10:
-            self.draw_gameover_sprite(model, self.sprite_win)
+            sprites = self.sprite_gameover
+            if model.current_level_index >= len(model.config_data["levels"]):
+                sprites = self.sprite_win
+            self.draw_finish_sprite(model, sprites)
 
         if model.state in (
             GameState.START_MENU,

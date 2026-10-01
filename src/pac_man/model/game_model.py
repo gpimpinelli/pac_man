@@ -19,7 +19,7 @@ class GameState(Enum):
     HIGHSCORES = auto()
     INSTRUCTIONS = auto()
     ENTER_NAME = auto()
-    # CHEAT MODE
+    CHEAT_MODE = auto()
 
 
 # ==========================================
@@ -182,7 +182,8 @@ class GameModel(BaseModel):
         for i in range(len(self.ghosts)):
             self._spawn_entities(self.ghosts[i], self.maze.ghost_spawns[i])
             
-        self.level_time_remaining = float(self.config_data.get("level_max_time", 90))
+        base_time = self.config_data.get("level_max_time", 180)
+        self.level_time_remaining = base_time * (1.05 ** self.current_level_index)
 
     def _reset_game(self) -> None:
         self._freeze_game()
@@ -243,7 +244,16 @@ class GameModel(BaseModel):
             self.player.speed += 25
             self._change_ghosts_state(GhostState.FRIGHTENED)
             self.maze.total_pacgums -= 1
-
+    
+    def level_skip(self) -> None:
+        self.current_level_index += 1
+        if self.current_level_index >= len(self.config_data["levels"]):
+            self.state = GameState.ENTER_NAME
+        else:
+            self._load_level(is_first=False)
+        
+    def add_lives(self) -> None:
+        self.player.add_lives()
 
     def update(self, dt: float):
         """
@@ -263,7 +273,10 @@ class GameModel(BaseModel):
             self.player.lives -= 1
             self.player.state = PlayerState.DEAD
             
-            if not self.player.has_lives:
+            if (
+                not self.player.has_lives
+                or self.current_level_index >= len(self.config_data["levels"])
+            ):
                 self.state = GameState.ENTER_NAME
             else:
                 self._reset_game()
@@ -340,8 +353,11 @@ class GameModel(BaseModel):
                 break
 
         if self.maze.finish_pacgums():
-            self.state = GameState.DEATH_PAUSE
             self.current_level_index += 1
+            if self.current_level_index >= len(self.config_data["levels"]):
+                self.state = GameState.ENTER_NAME
+                return 0
+            self.state = GameState.DEATH_PAUSE
             self._load_level(is_first=False)
             return 0
 

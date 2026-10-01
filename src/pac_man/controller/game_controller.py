@@ -62,6 +62,14 @@ class GameController:
         DOWN = 65364
         LEFT = 65361
         RIGHT = 65363
+
+        ONE = 49
+        TWO = 50
+        THREE = 51
+        FOUR = 52
+        FIVE = 53
+        SIX = 54
+
         W = 119
         S = 115
         A = 97
@@ -183,8 +191,15 @@ class GameController:
             self.model.state = GameState.START_MENU
             self.model.selected_button_index = 0
 
+    def _pause_game(self, action: int) -> None:
+        if action:
+            self.model.player.desired_dir = action
+            self.model.player.state = PlayerState.ALIVE
+            self.model.state = GameState.PLAYING
+            self.last_time = time.perf_counter()
 
     def on_key_press(self, keycode: int, *args):
+        
         if keycode in (self.Key.ESC, 27, ord('q'), ord('Q')):
             self.close_game()
             
@@ -193,13 +208,28 @@ class GameController:
         if self.model.state == GameState.PLAYING:
             if action:
                 self.model.player.desired_dir = action
-                
+            if keycode == self.Key.SIX:
+                self.model.state = GameState.CHEAT_MODE
+
+        elif self.model.state == GameState.CHEAT_MODE:
+            self._pause_game(action)
+            match keycode:
+                case self.Key.ONE:
+                    pass
+                    # IL GICOATORE NON PUO ESSERE MANGIATO
+                case self.Key.TWO:
+                    self.model.level_skip()
+                case self.Key.THREE:
+                    pass
+                    # GHOST FREEZE
+                case self.Key.FOUR:
+                    self.model.add_lives()
+                case self.Key.FIVE:
+                    pass
+                    # AUMENTA VELOCITA'
+
         elif self.model.state == GameState.DEATH_PAUSE:
-            if action:
-                self.model.player.desired_dir = action
-                self.model.player.state = PlayerState.ALIVE
-                self.model.state = GameState.PLAYING
-                self.last_time = time.perf_counter()
+            self._pause_game(action)
 
         elif self.model.state == GameState.ENTER_NAME:
             if keycode in (self.Key.ENTER, 13):
