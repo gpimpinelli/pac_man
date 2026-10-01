@@ -82,7 +82,7 @@ class GameView:
         # mlx_new_window: Create a new window on the screen
         self.win_ptr = self.m.mlx_new_window(
             self.mlx_ptr,
-            self.config.width,+
+            self.config.width,
             self.config.height,
             self.config.title
         )
@@ -112,6 +112,12 @@ class GameView:
         self.main_renderer = Renderer(self)
 
         self.active_buttons: list[MenuButton] = []
+
+        # Menu padding
+        self.padding_menu: tuple[int, int] = (
+            self.config.width // 4 + 100,
+            self.config.height // 4 - 50
+        )
 
         # Renderer Minimap
         minimap_size = 200
@@ -186,15 +192,14 @@ class GameView:
         # Creiamo un helper che accetta il nome, unisce il path, 
         # lo codifica e restituisce SOLO il puntatore dell'immagine [0]
 
-        padding_menu: tuple[int, int] = (230, 230)
-        self._background_menu(padding_menu, w, h, Colors.MENU_BG)
+        self._background_menu(self.padding_menu, w, h, Colors.MENU_BG)
 
-        menu_w = w - (padding_menu[0] * 2)
-        menu_h = h - (padding_menu[1] * 2)
+        menu_w = w - (self.padding_menu[0] * 2)
+        menu_h = h - (self.padding_menu[1] * 2)
 
         btn_w, btn_h = 200, 50
-        btn_x = padding_menu[0] + (menu_w - btn_w) // 2
-        btn_y = padding_menu[1] + menu_h - btn_h - 20
+        btn_x = self.padding_menu[0] + (menu_w - btn_w) // 2
+        btn_y = self.padding_menu[1] + menu_h - btn_h - 20
 
         self.draw_rect_fast(
             coords=(btn_x, btn_y),
@@ -208,22 +213,21 @@ class GameView:
 
     def draw_text(self, w: int, h: int, text: list[str], is_highscores: bool = False) -> None:
         """Disegna il testo centrato direttamente sulla finestra (dopo il put_image)."""
-        padding_menu: tuple[int, int] = (230, 230)
-        menu_w = w - (padding_menu[0] * 2)
-        menu_h = h - (padding_menu[1] * 2)
+        menu_w = w - (self.padding_menu[0] * 2)
+        menu_h = h - (self.padding_menu[1] * 2)
 
         line_height = 30 if is_highscores else 20
         total_text_height = len(text) * line_height
 
         # Calcola la coordinata Y di partenza per centrare le righe anche verticalmente
-        start_y = padding_menu[1] + max(20, (menu_h - total_text_height) // 2)
+        start_y = self.padding_menu[1] + max(20, (menu_h - total_text_height) // 2)
 
         for i, line in enumerate(text):
             # Stima della larghezza del font bitmap predefinito (~10 px per carattere)
             text_width = len(line) * 10
             
             # Centratura orizzontale esatta rispetto al box del menu
-            text_x = padding_menu[0] + ((menu_w - text_width) // 2)
+            text_x = self.padding_menu[0] + ((menu_w - text_width) // 2)
             text_y = start_y + (line_height * i)
 
             self.m.mlx_string_put(
@@ -245,12 +249,10 @@ class GameView:
     ) -> None: 
         
         self.active_buttons.clear()
-            
-        padding_menu: tuple[int, int] = (230, 230)
-        self._background_menu(padding_menu, w, h, Colors.MENU_BG)
+        self._background_menu(self.padding_menu, w, h, Colors.MENU_BG)
         
-        menu_x = padding_menu[0]
-        menu_y = padding_menu[1]
+        menu_x = self.padding_menu[0]
+        menu_y = self.padding_menu[1]
         
         menu_w = w - (menu_x * 2)
         menu_h = h - (menu_y * 2)

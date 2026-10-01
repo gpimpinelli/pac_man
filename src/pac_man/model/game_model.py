@@ -40,7 +40,7 @@ class GameModel(BaseModel):
 
     state: GameState = GameState.START_MENU
 
-    tile_size: int = Field(default=32)
+    tile_size: int = Field(default=48)
 
     config_data: dict[str, Any] = Field(default_factory=dict)
 

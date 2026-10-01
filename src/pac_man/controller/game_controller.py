@@ -90,7 +90,7 @@ class GameController:
     def __init__(self, config_data: dict[str, Any] = None):
         """Initialize the Controller using Pydantic configurations."""
         
-        self.config = GameConfig(width=1640, height=1000, target_fps=60)
+        self.config = GameConfig(width=2048, height=1260, target_fps=60)
 
         self.last_time = time.perf_counter()
         
