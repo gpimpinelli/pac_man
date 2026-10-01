@@ -79,6 +79,8 @@ class GameView:
 
         self.sprite_gameover = load_sprite("gameover.xpm")
 
+        self.sprite_win = load_sprite("win.xpm")
+
         # mlx_new_window: Create a new window on the screen
         self.win_ptr = self.m.mlx_new_window(
             self.mlx_ptr,
@@ -442,11 +444,11 @@ class GameView:
                 self.mlx_ptr, self.win_ptr, current_mini, mini_gx - offset, mini_gy - offset
             )
 
-    def draw_gameover_sprite(self, model: GameModel) -> None:
+    def draw_gameover_sprite(self, model: GameModel, sprites: int) -> None:
         """Disegna il logo di Game Over centrato nella parte alta dello schermo."""
         
         # Il Game Over appare in due stati: quando inserisci il nome e nel menu finale
-        if model.state not in (GameState.GAME_OVER, GameState.ENTER_NAME):
+        if model.state != GameState.ENTER_NAME:
             return
 
         sprite_width = 300  
@@ -456,7 +458,7 @@ class GameView:
         
         y = self.config.height // 2 - (sprite_height // 2) - sprite_height
 
-        self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.sprite_gameover, x, y)
+        self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, sprites, x, y)
 
     def render(self, model: GameModel) -> None:
         """Extract data from the Model and render it to the window."""
@@ -534,7 +536,9 @@ class GameView:
         self.draw_main_sprites(model)
         self.draw_minimap_sprites(model)
         if model.state == GameState.ENTER_NAME:
-            self.draw_gameover_sprite(model)
+            self.draw_gameover_sprite(model, self.sprite_gameover)
+        elif model.current_level_index == 10:
+            self.draw_gameover_sprite(model, self.sprite_win)
 
         if model.state in (
             GameState.START_MENU,
@@ -555,7 +559,8 @@ class GameView:
 
         game_info = [
             f"Score: {model.player.score}",
-            f"Level: {model.current_level_index}"
+            f"Level: {model.current_level_index + 1}",
+            f"Time: {int(model.level_time_remaining)}"
         ]
         
         minimap_pixel_height = model.maze.height * self.minimap_renderer.tile_size
@@ -570,7 +575,7 @@ class GameView:
         
         # Draw Heart sprites in the game background
         heart_x_start = self.minimap_renderer.view_x + 10
-        heart_y = actual_bottom_y + 20 + 20 + 20 * 1
+        heart_y = actual_bottom_y + 20 + 20 * len(game_info)
         heart_size = 16
         for i in range(model.player.lives):
             self.m.mlx_put_image_to_window(

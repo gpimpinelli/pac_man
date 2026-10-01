@@ -56,7 +56,7 @@ class GameModel(BaseModel):
 
     level_time_remaining: float = 0.0
 
-    current_level_index: int = 0
+    current_level_index: int = 9
 
     # Disable assignment validation for performance during the 60fps loop
     model_config = ConfigDict(validate_assignment=False)
@@ -83,7 +83,8 @@ class GameModel(BaseModel):
         )
 
         half_tile = self.tile_size // 2
-        self.player = Player(lives=(self.config_data["lives"] - 1))
+        speed = 90 * (1.05 ** self.current_level_index)
+        self.player = Player(lives=(self.config_data["lives"] - 1), speed= speed + 10)
 
         x_pixel = float(spawn_x + half_tile)
         y_pixel = float(spawn_y + half_tile)
@@ -91,9 +92,7 @@ class GameModel(BaseModel):
         self.player.y = y_pixel
         self.player.coords_spawn = (x_pixel, y_pixel)
 
-
-
-        speed = 90 * (1.05 ** self.current_level_index)
+        
 
         for coords, c in zip(self.maze.ghost_spawns, COLORS):
             coords_pixel: tuple[int, int] = cell_to_pixel(
@@ -240,7 +239,8 @@ class GameModel(BaseModel):
         elif cell.has_super_pacgum:
             cell.remove_gum(is_super_gum=True)
             self.player.score += int(self.config_data["points_per_super_pacgum"] * self.player.multiplicator)
-            self.player.super_timer = (self.config_data["level_max_time"] // 5) + (1.5 * self.current_level_index)
+            self.player.super_timer = (self.config_data["level_max_time"] // 7) + (1.5 * self.current_level_index)
+            self.player.speed += 25
             self._change_ghosts_state(GhostState.FRIGHTENED)
             self.maze.total_pacgums -= 1
 
@@ -267,7 +267,7 @@ class GameModel(BaseModel):
                 self.state = GameState.ENTER_NAME
             else:
                 self._reset_game()
-                self.level_time_remaining = float(self.config_data.get("level_max_time", 90))
+                self.level_time_remaining = float(self.config_data.get("level_max_time", 180))
             return
 
         if self.level_time_remaining < self.config_data["level_max_time"] - 7:
@@ -350,10 +350,11 @@ class GameModel(BaseModel):
             and self.player.super_timer > 0
         ):
             self.player.super_timer -= dt
-
+            
             if self.player.super_timer <= 0:
                 self.player.super_timer = 0.0
                 self._change_ghosts_state(GhostState.CHASE)
+                self.player.speed -= 25
 
         if not self.player.is_super:
             self.player.multiplicator = 1
