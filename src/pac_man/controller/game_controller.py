@@ -43,6 +43,18 @@ and advance before time runs out. Avoid the ghosts!
     You start with 3 lives. Colliding with a normal 
     ghost costs 1 life and respawns you in the center."""
     )
+    cheat_mode_command: str = (
+        """=== CHEAT MODE CONTROLS ===
+
+    [ 1 ] Toggle Invincibility (no lives lost)
+    [ 2 ] Skip Current Level
+    [ 3 ] Freeze / Unfreeze Ghosts
+    [ 4 ] Add +1 Extra Life
+    [ 5 ] Increase Player Speed
+    [ 6 ] Exit Cheat Mode
+
+    Press [ WASD ] or [ ARROWS ] to resume play."""
+    )
 
 # ==========================================
 # 3. CONTROLLER (Input, Loop, and Integration)
@@ -215,8 +227,7 @@ class GameController:
             self.model._freeze_game()
             match keycode:
                 case self.Key.ONE:
-                    pass
-                    # IL GICOATORE NON PUO ESSERE MANGIATO
+                    self.model.toggle_invincible()
                 case self.Key.TWO:
                     self.model.level_skip()
                 case self.Key.THREE:

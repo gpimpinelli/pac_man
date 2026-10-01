@@ -92,8 +92,6 @@ class GameModel(BaseModel):
         self.player.y = y_pixel
         self.player.coords_spawn = (x_pixel, y_pixel)
 
-        
-
         for coords, c in zip(self.maze.ghost_spawns, COLORS):
             coords_pixel: tuple[int, int] = cell_to_pixel(
                 coords, (0, 0), self.tile_size
@@ -253,6 +251,10 @@ class GameModel(BaseModel):
         
     def add_lives(self) -> None:
         self.player.add_lives()
+        
+    def toggle_invincible(self) -> None:
+        self.player.toggle_invincible()
+        print(f"[CHEAT] Invincibility: {self.player.is_invincible}")
 
     def update(self, dt: float):
         """
@@ -332,14 +334,9 @@ class GameModel(BaseModel):
                 self.player.multiplicator = 1.5
                 self.player.score += int(self.config_data["points_per_ghost"] * self.player.multiplicator)
                 collided_ghost.state = GhostState.EATEN
-            
-            elif self.player.is_super and collided_ghost.state != GhostState.CHASE: 
-                self.player.lives -= 1
-                self.player.state = PlayerState.DEAD
-                if not self.player.has_lives:
-                    self.state = GameState.ENTER_NAME
-                else:
-                    self._reset_game()
+
+            elif self.player.is_invincible:
+                continue
 
             else:
                 # Il fantasma mangia Pac-Man
