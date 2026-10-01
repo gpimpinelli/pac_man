@@ -454,7 +454,7 @@ class GameView:
         
         x = (self.config.width - sprite_width) // 2
         
-        y = self.config.height // 2 - (sprite_height // 2) - 185
+        y = self.config.height // 2 - (sprite_height // 2) - sprite_height
 
         self.m.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.sprite_gameover, x, y)
 

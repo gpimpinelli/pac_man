@@ -90,7 +90,7 @@ class GameController:
     def __init__(self, config_data: dict[str, Any] = None):
         """Initialize the Controller using Pydantic configurations."""
         
-        self.config = GameConfig(width=2048, height=1260, target_fps=60)
+        self.config = GameConfig(width=1680, height=900, target_fps=60)
 
         self.last_time = time.perf_counter()
         
@@ -155,10 +155,10 @@ class GameController:
             self.model.state = GameState.DEATH_PAUSE
             
         elif selected_text == "SAVE SCORE":
-            if self.model.name_input.strip():
-                self.model.highscore_manager.add_score(
-                    self.model.name_input, self.model.player.score
-                )
+            name = self.model.name_input.strip() if self.model.name_input else "PLAYER"
+            self.model.highscore_manager.add_score(
+                name, self.model.player.score
+            )
 
             self.model.name_input = ""
             self.model.state = GameState.GAME_OVER
