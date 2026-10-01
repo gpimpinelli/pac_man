@@ -28,17 +28,18 @@ class MenuButton:
 # ==========================================
 class GameView:
     """Handle window creation, rendering, and MLX graphical outputs."""
-    # cheat = ("Press 6 for CHEAT_MODE",)
+    cheat = ("Press [ 6 ] for CHEAT_MODE",)
 
     cheat_mode_command: str = (
+        "",
+        "",
         "=== CHEAT MODE CONTROLS ===",
-        "[ 1 ] Toggle Invincibility (no lives lost)",
+        "[ 1 ] Toggle Invincibility",
         "[ 2 ] Skip Current Level",
         "[ 3 ] Freeze / Unfreeze Ghosts",
         "[ 4 ] Add +1 Extra Life",
         "[ 5 ] Increase Player Speed",
-        "[ 6 ] Exit Cheat Mode",
-        "Press [ WASD ] or [ ARROWS ] to resume play."
+        "[ 6 ] Exit Cheat Mode"
     )
 
     game_rules: str = (
@@ -488,23 +489,39 @@ ghost costs 1 life and respawns you in the center."""
 
     def render(self, model: GameModel) -> None:
         """Extract data from the Model and render it to the window."""
-
+        minimap_pixel_height = model.maze.height * self.minimap_renderer.tile_size
+        actual_bottom_y = self.minimap_renderer.offset_y + minimap_pixel_height
         static_states = (
             GameState.START_MENU,
             GameState.GAME_OVER,
             GameState.ENTER_NAME,
             GameState.HIGHSCORES,
             GameState.INSTRUCTIONS,
+            GameState.CHEAT_MODE,
         )
         if model.state in static_states:
             key = (
+                self.cheat,
                 model.state,
                 model.selected_button_index,
+                model.player.is_invincible,
                 tuple(model.menu_options),
                 tuple(model.highscore_manager.top_scores_text),
             )
             if key == self._last_frame_key:
                 # no change
+                # Draw Heart sprites in the game background
+                heart_x_start = self.minimap_renderer.view_x + 10
+                heart_y = actual_bottom_y + 20 + 20 * 4
+                heart_size = 16
+                for i in range(model.player.lives):
+                    self.m.mlx_put_image_to_window(
+                        self.mlx_ptr,
+                        self.win_ptr,
+                        self.sprite_heart,
+                        heart_x_start + i * (heart_size + 4),
+                        heart_y
+                    )
                 return
             self._last_frame_key = key
         else:
@@ -588,14 +605,11 @@ ghost costs 1 life and respawns you in the center."""
         game_info = [
             f"Score: {model.player.score}",
             f"Level: {model.current_level_index + 1}",
-            f"Time: {int(model.level_time_remaining)}"
+            f"Time: {int(model.level_time_remaining)}",
+            f"{self.cheat[0]}"
         ]
 
-        if model.state != GameState.CHEAT_MODE:
-            pass
-            # game_info.append(self.cheat[0])
-        else:
-            game_info.pop()
+        if model.state == GameState.CHEAT_MODE:
             size = len(self.cheat_mode_command)
             for i in range(size):
                 game_info.append(self.cheat_mode_command[i])
@@ -603,25 +617,8 @@ ghost costs 1 life and respawns you in the center."""
                for i in range(size):
                 game_info.pop(self.cheat_mode_command[i])     
 
-        minimap_pixel_height = model.maze.height * self.minimap_renderer.tile_size
-        
-        actual_bottom_y = self.minimap_renderer.offset_y + minimap_pixel_height
-
         self.print_game_info(
             x=self.minimap_renderer.view_x,
             y=actual_bottom_y + 20,
             text=game_info
         )
-        
-        # Draw Heart sprites in the game background
-        heart_x_start = self.minimap_renderer.view_x + 10
-        heart_y = actual_bottom_y + 20 + 20 * len(game_info)
-        heart_size = 16
-        for i in range(model.player.lives):
-            self.m.mlx_put_image_to_window(
-                self.mlx_ptr,
-                self.win_ptr,
-                self.sprite_heart,
-                heart_x_start + i * (heart_size + 4),
-                heart_y
-            )
