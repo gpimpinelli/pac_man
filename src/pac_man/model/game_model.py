@@ -204,7 +204,6 @@ class GameModel(BaseModel):
             ghost.current_dir = None
             ghost.desired_dir = None
 
-
     def _check_entity_collisions(self) -> list[int]:
         """Check if entitis collides"""
         hitbox_radius = self.tile_size * 0.4

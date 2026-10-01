@@ -380,7 +380,7 @@ class GameView:
     def draw_main_sprites(self, model: GameModel) -> None:
         """Disegna gli sprites principali passando l'offset come parametro."""
 
-        if model.state not in (GameState.PLAYING, GameState.DEATH_PAUSE):
+        if model.state not in (GameState.PLAYING, GameState.DEATH_PAUSE, GameState.CHEAT_MODE):
             return
         
         offset = 16
@@ -414,7 +414,7 @@ class GameView:
 
     def draw_minimap_sprites(self, model: GameModel) -> None:
         """Disegna i mini-sprites sulla minimappa usando le proporzioni corrette."""
-        if model.state not in (GameState.PLAYING, GameState.DEATH_PAUSE):
+        if model.state not in (GameState.PLAYING, GameState.DEATH_PAUSE, GameState.CHEAT_MODE):
             return
 
         # Calcola la proporzione tra minimappa (10) e mappa vera (32)

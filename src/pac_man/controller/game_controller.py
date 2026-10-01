@@ -212,7 +212,7 @@ class GameController:
                 self.model.state = GameState.CHEAT_MODE
 
         elif self.model.state == GameState.CHEAT_MODE:
-            self._pause_game(action)
+            self.model._freeze_game()
             match keycode:
                 case self.Key.ONE:
                     pass
@@ -227,6 +227,8 @@ class GameController:
                 case self.Key.FIVE:
                     pass
                     # AUMENTA VELOCITA'
+                case self.Key.SIX:
+                    self.model.state = GameState.DEATH_PAUSE
 
         elif self.model.state == GameState.DEATH_PAUSE:
             self._pause_game(action)
