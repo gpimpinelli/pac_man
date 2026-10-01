@@ -139,7 +139,7 @@ class GameView:
         self._last_frame_key: object = None
 
     def _background_menu(
-        self, padding: tuple[int, int], w: int, h: int, color: int=Colors.BACKGROUND
+        self, padding: tuple[int, int], w: int, h: int, color: int=Colors.MENU_BG
     ) -> None:
         new_w = w - (padding[0] * 2)
         new_h = h - (padding[1] * 2)
@@ -247,7 +247,7 @@ class GameView:
         self.active_buttons.clear()
             
         padding_menu: tuple[int, int] = (230, 230)
-        self._background_menu(padding_menu, w, h, Colors.BACKGROUND)
+        self._background_menu(padding_menu, w, h, Colors.MENU_BG)
         
         menu_x = padding_menu[0]
         menu_y = padding_menu[1]

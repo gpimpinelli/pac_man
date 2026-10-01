@@ -93,13 +93,14 @@ class Renderer:
                     # max(default, value -> 1/8 of the cell)
                     size = max(2, tile_size // 8)
                     px, py = center_in_pixel((cx, cy), tile_size, size)
-                    draw_rect((px,py), size, size, Colors.PLAYER)
+                    draw_rect((px,py), size, size, Colors.AMBRA)
                 
                 if cell.has_super_pacgum:
                     # max(default, value -> 1/8 of the cell)
                     size = max(4, tile_size // 6)
                     px, py = center_in_pixel((cx, cy), tile_size, size)
-                    draw_rect((px,py), size, size, Colors.MENU_BG)
+                    # TODO change the color
+                    draw_rect((px,py), size, size, Colors.SUPER_PACGUM)
 
 
     def draw_player(self, x: float, y: float, size: int, color: int) -> None:
