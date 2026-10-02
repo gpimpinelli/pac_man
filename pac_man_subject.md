@@ -9,10 +9,10 @@
         heat mode
         •Can be activated to facilitate peer review.
         •Suggested features:
-        ◦Invincibility (no life lost; ghosts cannot eat the player).
-        ◦Ghost freeze (ghosts stop moving).
-        ◦Increased speed (player moves faster).
-        ◦Any other feature that may be useful.
+        •Invincibility (no life lost; ghosts cannot eat the player).
+        •Ghost freeze (ghosts stop moving).
+        •Increased speed (player moves faster).
+        •Any other feature that may be useful.
 Keep in mind that the cheat mode is for peer review purposes, and therefore it must
 genuinely help the reviewer to test all features of your game easily.
 ## 8) modificare il padding_menu (nella game view) (FATTO)

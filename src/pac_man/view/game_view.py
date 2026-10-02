@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import os
 from typing import Any
 import mlx
-
+from .sprites_manager import SpriteManager
 from src.pac_man.model.entity import GhostState
 from ..model import Direction, GameModel, GameState
 from .colors import Colors
@@ -22,16 +22,14 @@ class MenuButton:
 class GameView:
     """Handle window creation, rendering, and MLX graphical outputs."""
 
-    cheat = ("Press [ 6 ] -> CHEAT",)
-
     cheat_mode_command: tuple[str, ...] = (
         "",
         "",
         "[ 1 ] Toggle Invincibility",
         "[ 2 ] Skip Current Level",
         "[ 3 ] Freeze / Unfreeze Ghosts",
-        "[ 4 ] Add +1 Extra Life",
-        "[ 5 ] Increase Player Speed",
+        "[ 4 ] Increase Player Speed",
+        "[ 5 ] Add +1 Extra Life",
         "[ 6 ] Exit Cheat Mode",
     )
 
@@ -61,43 +59,9 @@ ghost costs 1 life and respawns you in the center."""
         self.m = mlx.Mlx()
         self.mlx_ptr = self.m.mlx_init()
 
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        sprites_dir = os.path.join(current_dir, "sprites")
+        # Inizializza tutti gli sprite delegandoli alla classe esterna
+        self.sprites = SpriteManager(self.m, self.mlx_ptr)
 
-        def load_sprite(filename: str):
-            base_name = os.path.splitext(filename)[0]
-            path = os.path.join(sprites_dir, f"{base_name}.xpm")
-            return self.m.mlx_xpm_file_to_image(self.mlx_ptr, path)[0]
-
-        # 1. Carica Pac-Man
-        self.pacman_sprites = {
-            Direction.UP: load_sprite("pacman_up.xpm"),
-            Direction.DOWN: load_sprite("pacman_down.xpm"),
-            Direction.LEFT: load_sprite("pacman_left.xpm"),
-            Direction.RIGHT: load_sprite("pacman_right.xpm"),
-        }
-
-        # 2. Carica i 4 fantasmi
-        ghost_colors = ["red", "pink", "blu", "orange"]
-        self.ghost_normal_sprites = []
-        for color in ghost_colors:
-            self.ghost_normal_sprites.append(
-                {
-                    Direction.UP: load_sprite(f"{color}_up.xpm"),
-                    Direction.DOWN: load_sprite(f"{color}_down.xpm"),
-                    Direction.LEFT: load_sprite(f"{color}_left.xpm"),
-                    Direction.RIGHT: load_sprite(f"{color}_right.xpm"),
-                }
-            )
-
-        # 3. Carica sprite speciali e UI
-        self.sprite_frightened = load_sprite("ghost_eaten.xpm")
-        self.sprite_eaten = load_sprite("eaten.xpm")
-        self.sprite_heart = load_sprite("heart.xpm")
-        self.sprite_gameover = load_sprite("gameover.xpm")
-        self.sprite_win = load_sprite("win.xpm")
-
-        # Inizializzazione Finestra e Buffer
         self.win_ptr = self.m.mlx_new_window(
             self.mlx_ptr, self.config.width, self.config.height, self.config.title
         )
@@ -118,7 +82,6 @@ ghost costs 1 life and respawns you in the center."""
         bg_bytes = bytes([b_ch, g_ch, r_ch, 0xFF])
         self._bg_buffer = bg_bytes * (self.buffer_size // self.bytes_per_pixel)
 
-        # Renderers
         self.main_renderer = Renderer(
             self,
             tile_size=self.layout.main_tile_size
@@ -134,15 +97,6 @@ ghost costs 1 life and respawns you in the center."""
             view_h=mini.size,
             tile_size=mini.tile_size,
         )
-
-        mini_sprites_dir = os.path.join(sprites_dir, "mini")
-
-        def load_mini_sprite(filename: str):
-            path = os.path.join(mini_sprites_dir, filename)
-            return self.m.mlx_xpm_file_to_image(self.mlx_ptr, path)[0]
-
-        self.mini_pacman = load_mini_sprite("pacman_right.xpm")
-        self.mini_ghost_red = load_mini_sprite("red_up.xpm")
 
         self._last_frame_key: object = None
         self._startup_frames: int = 5
@@ -314,7 +268,6 @@ ghost costs 1 life and respawns you in the center."""
             )
 
     def draw_main_sprites(self, model: GameModel) -> None:
-        # Include anche LEVEL_COMPLETE così Pac-Man e i fantasmi restano visibili durante l'attesa
         if model.state not in (
             GameState.PLAYING,
             GameState.DEATH_PAUSE,
@@ -324,8 +277,8 @@ ghost costs 1 life and respawns you in the center."""
             return
 
         offset = self.layout.sprite_offset
-        default_pacman = self.pacman_sprites[Direction.RIGHT]
-        current_pacman_sprite = self.pacman_sprites.get(
+        default_pacman = self.sprites.pacman[Direction.RIGHT]
+        current_pacman_sprite = self.sprites.pacman.get(
             model.player.current_dir, default_pacman
         )
 
@@ -342,11 +295,11 @@ ghost costs 1 life and respawns you in the center."""
 
             if ghost.state in (GhostState.CHASE, GhostState.SCATTER):
                 g_dir = ghost.current_dir if ghost.current_dir else Direction.UP
-                current_ghost_sprite = self.ghost_normal_sprites[i][g_dir]
+                current_ghost_sprite = self.sprites.ghosts_normal[i][g_dir]
             elif ghost.state == GhostState.FRIGHTENED:
-                current_ghost_sprite = self.sprite_frightened
+                current_ghost_sprite = self.sprites.frightened
             elif ghost.state == GhostState.EATEN:
-                current_ghost_sprite = self.sprite_eaten
+                current_ghost_sprite = self.sprites.eaten
 
             if current_ghost_sprite:
                 self.m.mlx_put_image_to_window(
@@ -370,7 +323,7 @@ ghost costs 1 life and respawns you in the center."""
         self.m.mlx_put_image_to_window(
             self.mlx_ptr,
             self.win_ptr,
-            self.mini_pacman,
+            self.sprites.mini_pacman,
             mini_px - offset,
             mini_py - offset,
         )
@@ -385,7 +338,7 @@ ghost costs 1 life and respawns you in the center."""
             self.m.mlx_put_image_to_window(
                 self.mlx_ptr,
                 self.win_ptr,
-                self.mini_ghost_red,
+                self.sprites.mini_ghost_red,
                 mini_gx - offset,
                 mini_gy - offset,
             )
@@ -400,13 +353,13 @@ ghost costs 1 life and respawns you in the center."""
         )
 
     def draw_hud(self, model: GameModel, actual_bottom_y: int) -> None:
-        # Non mostrare l'HUD nei menu
         if model.state in (
             GameState.START_MENU,
             GameState.HIGHSCORES,
             GameState.INSTRUCTIONS,
             GameState.GAME_OVER,
             GameState.ENTER_NAME,
+            GameState.PAUSE,
         ):
             return
 
@@ -415,7 +368,7 @@ ghost costs 1 life and respawns you in the center."""
             f"Score: {model.player.score}",
             f"Level: {model.current_level_index + 1}",
             f"Time: {int(model.level_time_remaining)}",
-            f"{self.cheat[0]}",
+            "[6] CHEAT [ESC] PAUSE",
         ]
 
         if model.state == GameState.CHEAT_MODE:
@@ -428,16 +381,17 @@ ghost costs 1 life and respawns you in the center."""
             text=game_info,
         )
 
-        # Stampa dei cuori posizionati in modo FISSO sotto le prime 4 righe
+        total_text_lines = len(game_info)
+
         heart_x_start = self.minimap_renderer.view_x + hud.inner_padding_x
-        heart_y = start_y + (hud.line_height * 4) + 10
+        heart_y = start_y + (hud.line_height * total_text_lines) + 10
         total_heart_step = hud.heart_size + hud.heart_spacing
 
         for i in range(model.player.lives):
             self.m.mlx_put_image_to_window(
                 self.mlx_ptr,
                 self.win_ptr,
-                self.sprite_heart,
+                self.sprites.heart,
                 heart_x_start + (i * total_heart_step),
                 heart_y,
             )
@@ -459,16 +413,14 @@ ghost costs 1 life and respawns you in the center."""
             GameState.HIGHSCORES,
             GameState.INSTRUCTIONS,
             GameState.CHEAT_MODE,
+            GameState.PAUSE,
         )
 
-        # Gestione cache frame statici (senza disegnare i cuori all'interno)
         if model.state in static_states:
             key = (
-                self.cheat,
                 model.state,
                 model.selected_button_index,
                 model.player.lives,
-                model.player.speed,
                 tuple(model.menu_options),
                 tuple(model.highscore_manager.top_scores_text),
             )
@@ -490,6 +442,7 @@ ghost costs 1 life and respawns you in the center."""
             GameState.START_MENU,
             GameState.GAME_OVER,
             GameState.ENTER_NAME,
+            GameState.PAUSE,
         ):
             self.draw_main_menu(
                 selected_index=model.selected_button_index,
@@ -499,26 +452,24 @@ ghost costs 1 life and respawns you in the center."""
         elif model.state in (GameState.HIGHSCORES, GameState.INSTRUCTIONS):
             self.draw_menu(button_lst=model.menu_options)
 
-        # 2. Presentazione finestra
         self.m.mlx_put_image_to_window(
             self.mlx_ptr, self.win_ptr, self.img, 0, 0
         )
 
-        # 3. Sprites entità (visibili anche in LEVEL_COMPLETE)
         self.draw_main_sprites(model)
         self.draw_minimap_sprites(model)
 
         if model.state == GameState.ENTER_NAME:
-            sprites = self.sprite_gameover
+            sprites = self.sprites.gameover
             if model.current_level_index >= len(model.config_data["levels"]):
-                sprites = self.sprite_win
+                sprites = self.sprites.win
             self.draw_finish_sprite(sprites)
 
-        # 4. Elementi interattivi e Testi
         if model.state in (
             GameState.START_MENU,
             GameState.GAME_OVER,
             GameState.ENTER_NAME,
+            GameState.PAUSE,
         ):
             self.draw_button(model.state)
         elif model.state in (GameState.HIGHSCORES, GameState.INSTRUCTIONS):
@@ -532,7 +483,6 @@ ghost costs 1 life and respawns you in the center."""
             )
             self.draw_button(model.state)
 
-        # 5. HUD e Cuori
         self.draw_hud(model, actual_bottom_y)
 
         if hasattr(self.m, "mlx_do_sync"):

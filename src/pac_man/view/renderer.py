@@ -17,8 +17,7 @@ class Renderer:
         tile_size: int = 48
     ) -> None:
         self.view: "GameView" = view
-        
-        # Salviamo i parametri di layout della finestra per usarli dopo
+
         self.view_x = view_x
         self.view_y = view_y
         self.view_w = view_w

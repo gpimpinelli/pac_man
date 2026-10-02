@@ -21,6 +21,7 @@ class GameState(Enum):
     ENTER_NAME = auto()
     CHEAT_MODE = auto()
     LEVEL_COMPLETE = auto()
+    PAUSE = auto()
 
 
 # ==========================================
@@ -86,7 +87,7 @@ class GameModel(BaseModel):
         )
 
         half_tile = self.tile_size // 2
-        speed = 110 * (1.02 ** self.current_level_index)
+        speed = 100 * (1.02 ** self.current_level_index)
         self.player = Player(lives=(self.config_data["lives"] - 1), speed= speed + 10)
 
         x_pixel = float(spawn_x + half_tile)
@@ -148,6 +149,8 @@ class GameModel(BaseModel):
             return ("START", "HIGHSCORES", "INSTRUCTIONS", "EXIT")
         elif self.state == GameState.GAME_OVER:
             return ("RETRY", "MAIN MENU", "EXIT")
+        elif self.state == GameState.PAUSE:
+            return ("RESUME", "MAIN MENU", "EXIT")
         elif self.state == GameState.ENTER_NAME:
             display_name = self.name_input if self.name_input else "Insert Name"
             return ("", display_name, "SAVE SCORE")

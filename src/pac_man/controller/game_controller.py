@@ -118,6 +118,10 @@ class GameController:
             self.model.state = GameState.GAME_OVER
             self.model.selected_button_index = 0
         
+        elif selected_text == "RESUME":
+            self.model.state = GameState.PLAYING
+            self.last_time = time.perf_counter()
+
         elif selected_text == "HIGHSCORES":
             self.model.state = GameState.HIGHSCORES
             self.model.selected_button_index = 0
@@ -145,16 +149,16 @@ class GameController:
             self.last_time = time.perf_counter()
 
     def on_key_press(self, keycode: int, *args):
-        if keycode in (self.Key.ESC, 27, ord('q'), ord('Q')):
-            self.close_game()
-            
         action = self.KEYS_MAP.get(keycode)
 
         if self.model.state == GameState.PLAYING:
             if action:
                 self.model.player.desired_dir = action
-            if keycode == self.Key.SIX:
+            elif keycode == self.Key.SIX:
                 self.model.state = GameState.CHEAT_MODE
+            elif keycode in (self.Key.ESC, 27, ord('p'), ord('P'), ord('q'), ord('Q')):
+                self.model.state = GameState.PAUSE
+                self.model.selected_button_index = 0
 
         elif self.model.state == GameState.CHEAT_MODE:
             match keycode:
@@ -165,9 +169,9 @@ class GameController:
                 case self.Key.THREE:
                     self.model.freeze_ghosts()
                 case self.Key.FOUR:
-                    self.model.add_lives()
-                case self.Key.FIVE:
                     self.model.increase_speed()
+                case self.Key.FIVE:
+                    self.model.add_lives()
                 case self.Key.SIX:
                     self.model.state = GameState.DEATH_PAUSE
 
@@ -188,13 +192,19 @@ class GameController:
                     self.model.name_input += chr(keycode).upper()
             elif keycode in (self.Key.BACKSPACE, 65288):
                 self.model.name_input = self.model.name_input[:-1]
-                
+
         elif self.model.state in (
             GameState.GAME_OVER,
             GameState.START_MENU,
             GameState.HIGHSCORES,
-            GameState.INSTRUCTIONS
+            GameState.INSTRUCTIONS,
+            GameState.PAUSE
         ):
+            if self.model.state == GameState.PAUSE and keycode in (self.Key.ESC, 27, ord('p'), ord('P')):
+                self.model.state = GameState.PLAYING
+                self.last_time = time.perf_counter()
+                return 0
+
             options = self.model.menu_options
             num_buttons = len(options) if options else 1
 
