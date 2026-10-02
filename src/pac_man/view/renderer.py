@@ -1,6 +1,6 @@
 from ..model import MazeAdapter
 from .colors import Colors
-from src.pac_man.utils import cell_to_pixel, center_in_pixel
+from pac_man.utils import cell_to_pixel, center_in_pixel
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

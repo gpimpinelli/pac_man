@@ -3,7 +3,7 @@ import random
 from .entity import Entity
 from .direction import Direction
 from enum import Enum, auto
-from src.pac_man.utils import pixel_to_cell
+from pac_man.utils import pixel_to_cell
 
 
 class GhostState(Enum):

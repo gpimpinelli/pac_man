@@ -6,8 +6,7 @@ from pydantic import BaseModel, Field
 
 from ..view import GameView
 from ..view.layout import ViewLayout
-from ..model import GameModel, Direction, GameState
-from src.pac_man.model.entity import PlayerState
+from ..model import GameModel, Direction, GameState, PlayerState
 
 
 class GameConfig(BaseModel):
@@ -259,20 +258,19 @@ class GameController:
 
         return 0
 
-    def update_game(self, *args):
+    def update_game(self, *args: Any) -> None:
         current_time = time.perf_counter()
         dt = current_time - self.last_time
         frame_duration = 1.0 / self.config.target_fps
 
         if dt < frame_duration:
-            return 0
+            return
 
         self.last_time = current_time
         self.model.update(dt)
         self.view.render(self.model)
-        return 0
 
-    def run(self):
+    def run(self) -> None:
         print(
             f"{self.config.title} Engine Running. "
             "Premi frecce o WASD per muoverti. ESC per uscire."

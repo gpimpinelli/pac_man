@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 import mlx
 from .sprites_manager import SpriteManager
-from src.pac_man.model.entity import GhostState
+from pac_man.model.entity import GhostState
 from ..model import Direction, GameModel, GameState
 from .colors import Colors
 from .layout import ViewLayout

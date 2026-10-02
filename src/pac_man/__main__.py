@@ -1,4 +1,5 @@
 import sys
+from pathlib import Path
 from .config_parser import ConfigParser
 from .controller import GameController
 
@@ -14,7 +15,7 @@ def main() -> None:
         return
 
     try:
-        config = ConfigParser(path=argv[1])
+        config = ConfigParser(path=Path(argv[1]))
     except Exception as e:
         print(f"[ERROR] Could not load config: {e}")
         return

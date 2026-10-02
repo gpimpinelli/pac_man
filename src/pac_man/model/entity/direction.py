@@ -11,12 +11,12 @@ class Direction(Enum):
 
 
 KEYS_MAP = {
-    65362: Direction.UP,  # Up Arrow
-    119: Direction.UP,  # w
-    65364: Direction.DOWN,  # Down Arrow
-    115: Direction.DOWN,  # s
-    65361: Direction.LEFT,  # Left Arrow
-    97: Direction.LEFT,  # a
-    65363: Direction.RIGHT,  # Right Arrow
-    100: Direction.RIGHT,  # d
+    65362: Direction.UP,
+    119: Direction.UP,
+    65364: Direction.DOWN,
+    115: Direction.DOWN,
+    65361: Direction.LEFT,
+    97: Direction.LEFT,
+    65363: Direction.RIGHT,
+    100: Direction.RIGHT,
 }

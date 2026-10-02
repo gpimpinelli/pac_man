@@ -4,7 +4,7 @@ from typing import Any
 from enum import Enum, auto
 from .maze_adapter import Cell, MazeAdapter
 from .highscores import HighscoreManager
-from src.pac_man.utils import pixel_to_cell, cell_to_pixel
+from pac_man.utils import pixel_to_cell, cell_to_pixel
 from pydantic import BaseModel, ConfigDict, model_validator, Field
 from .entity import Ghost, GhostState, Player, PlayerState, Direction, Entity
 
