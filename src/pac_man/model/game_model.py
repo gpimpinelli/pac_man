@@ -204,6 +204,10 @@ class GameModel(BaseModel):
         for ghost in self.ghosts:
             ghost.current_dir = None
             ghost.desired_dir = None
+            
+    def freeze_ghosts(self) -> None:
+        for ghost in self.ghosts:
+            ghost.freeze()
 
     def _check_entity_collisions(self) -> list[int]:
         """Check if entitis collides"""
@@ -255,9 +259,15 @@ class GameModel(BaseModel):
     def add_lives(self) -> None:
         self.player.add_lives()
         
+    def increase_speed(self) -> None:
+        print(f"[CHEAT] Player speed: {self.player.speed}")
+        self.player.increase_player_speed()
+        print(f"[CHEAT] Increased Player speed: {self.player.speed}")
+
+        
     def toggle_invincible(self) -> None:
         self.player.toggle_invincible()
-        # print(f"[CHEAT] Invincibility: {self.player.is_invincible}")
+        print(f"[CHEAT] Invincibility: {self.player.is_invincible}")
 
     def _handle_player_death(self) -> None:
         self.player.lives -= 1

@@ -35,6 +35,8 @@ class Player(Entity):
     def add_lives(self) -> None:
         self.lives += 1
     
+    def increase_player_speed(self) -> None:
+        self.speed += 25
 
     def remove_super(self) -> None:
         self.super_timer = 0.0

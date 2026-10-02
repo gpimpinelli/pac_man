@@ -1,5 +1,6 @@
 import math
 import random
+from typing import Any
 from .entity import Entity
 from .direction import Direction
 from enum import Enum, auto
@@ -16,11 +17,23 @@ class Ghost(Entity):
     state: GhostState = GhostState.SCATTER
     last_decision_cell: tuple[int, int] = (-1, -1)
     respawn_timer: float = 0.0
-
+    is_frozen: bool = False
+    initial_speed: float = 0.0
+    
     @property
     def is_already_eaten(self) -> bool:
         """Check if the ghost have state = GhostState.EATEN"""
         return self.state == GhostState.EATEN
+    
+    def freeze(self) -> None:
+        self.is_frozen = not self.is_frozen
+        if self.is_frozen:
+            if self.speed > 0:
+                self.initial_speed = self.speed
+            self.speed = 0.0 
+        else:
+            self.speed = self.initial_speed
+        print(f"[CHEAT] Ghost speed: {self.speed}")
 
     def _evaluate_path(
         self,

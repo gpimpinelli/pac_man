@@ -200,13 +200,11 @@ class GameController:
                 case self.Key.TWO:
                     self.model.level_skip()
                 case self.Key.THREE:
-                    pass
-                    # GHOST FREEZE
+                    self.model.freeze_ghosts()
                 case self.Key.FOUR:
                     self.model.add_lives()
                 case self.Key.FIVE:
-                    pass
-                    # AUMENTA VELOCITA'
+                    self.model.increase_speed()
                 case self.Key.SIX:
                     self.model.state = GameState.DEATH_PAUSE
 
