@@ -33,10 +33,12 @@ class Player(Entity):
         self.is_invincible = not self.is_invincible
     
     def add_lives(self) -> None:
-        self.lives += 1
+        if self.lives < 10:
+            self.lives += 1
     
     def increase_player_speed(self) -> None:
-        self.speed += 25
+        if speed < 300:
+            self.speed += 10
 
     def remove_super(self) -> None:
         self.super_timer = 0.0
