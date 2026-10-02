@@ -8,14 +8,15 @@ from mazegenerator import MazeGenerator
 from dataclasses import dataclass
 from enum import IntFlag, auto
 
-class Direction(IntFlag):
-    NONE  = 0
-    NORTH = auto()  # 1
-    EAST  = auto()  # 2
-    SOUTH = auto()  # 4
-    WEST = auto()   # 8
 
-    ALL_WALLS =  WEST | SOUTH | EAST | NORTH # 15
+class Direction(IntFlag):
+    NONE = 0
+    NORTH = auto()  # 1
+    EAST = auto()  # 2
+    SOUTH = auto()  # 4
+    WEST = auto()  # 8
+
+    ALL_WALLS = WEST | SOUTH | EAST | NORTH  # 15
 
 
 @dataclass(slots=True)
@@ -32,7 +33,6 @@ class Cell:
 
     coords: tuple[int, int]
     wall_code: Direction = Direction.NONE
-
 
     # Gameplay attributes
     has_pacgum: bool = False
@@ -72,11 +72,15 @@ class Cell:
         else:
             self.has_pacgum = False
 
+
 class MazeAdapter:
     """Adapts external MazeGenerator to the Pac-Man game domain."""
 
     def __init__(
-        self, width: int = 15, height: int = 15, seed: int = 42
+        self,
+        width: int = 15,
+        height: int = 15,
+        seed: int = 42
     ) -> None:
         """Initializes the adapter and generates the maze grid.
 
@@ -139,7 +143,7 @@ class MazeAdapter:
             (0, 0),
             (self.width - 1, 0),
             (0, self.height - 1),
-            (self.width - 1, self.height - 1)
+            (self.width - 1, self.height - 1),
         ]
 
         self.total_pacgums = 0
@@ -167,35 +171,3 @@ class MazeAdapter:
         if 0 <= x < self.width and 0 <= y < self.height:
             return self.grid[y][x]
         return None
-
-
-if __name__ == "__main__":
-    adapter = MazeAdapter(width=15, height=15, seed=42)
-    print("=== TEST MAZE ADAPTER ===")
-    print(f"Dimensioni labirinto: {adapter.width}x{adapter.height}")
-    print(f"Player spawn (Centro): {adapter.player_spawn}")
-    print(f"Ghost spawns (4 angoli): {adapter.ghost_spawns}")
-    print(f"Totale pacgum da mangiare: {adapter.total_pacgums}")
-
-    # Visualizzazione ASCII del labirinto
-    print("\n--- Anteprima Griglia (P=Pacman, G=Ghost/SuperPacgum, .=Pacgum, #=Muro solido) ---")
-    for y in range(adapter.height):
-        line = ""
-        for x in range(adapter.width):
-            c = adapter.get_cell(x, y)
-            if c is None:
-                line += " "
-            elif (x, y) == adapter.player_spawn:
-                line += "P "
-            elif (x, y) in adapter.ghost_spawns:
-                line += "G "
-            elif c.is_solid:
-                line += "# "
-            elif c.has_super_pacgum:
-                line += "O "
-            elif c.has_pacgum:
-                line += ". "
-            else:
-                line += "  "
-        print(line)
-

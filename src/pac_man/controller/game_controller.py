@@ -64,33 +64,53 @@ class GameController:
         self.config = GameConfig(width=1680, height=900, target_fps=60)
 
         self.layout = ViewLayout.from_window_size(
-            self.config.width, 
-            self.config.height, 
+            self.config.width,
+            self.config.height,
         )
 
         self.last_time = time.perf_counter()
-        
+
         self.view = GameView(self.config, self.layout)
 
         self.model = GameModel(
             screen_width=self.config.width,
             screen_height=self.config.height,
             tile_size=self.layout.main_tile_size,
-            config_data=config_data
+            config_data=config_data,
         )
 
         self.model.size = self.layout.sprite_offset
         self.setup_hooks()
-        
+
     def setup_hooks(self):
         m = self.view.m
         win = self.view.win_ptr
-        
+
         m.mlx_hook(win, self.EventType.DESTROY, 0, self.close_game, None)
-        m.mlx_hook(win, self.EventType.DESTROY, self.EventMask.STRUCTURE_NOTIFY, self.close_game, None)
-        m.mlx_hook(win, self.EventType.CLIENT_MESSAGE, 0, self.close_game, None)
-        m.mlx_hook(win, self.EventType.CLIENT_MESSAGE, self.EventMask.STRUCTURE_NOTIFY, self.close_game, None)
-        m.mlx_hook(win, self.EventType.KEY_PRESS, self.EventMask.KEY_PRESS, self.on_key_press, None)
+        m.mlx_hook(
+            win,
+            self.EventType.DESTROY,
+            self.EventMask.STRUCTURE_NOTIFY,
+            self.close_game,
+            None,
+        )
+        m.mlx_hook(
+            win, self.EventType.CLIENT_MESSAGE, 0, self.close_game, None
+        )
+        m.mlx_hook(
+            win,
+            self.EventType.CLIENT_MESSAGE,
+            self.EventMask.STRUCTURE_NOTIFY,
+            self.close_game,
+            None,
+        )
+        m.mlx_hook(
+            win,
+            self.EventType.KEY_PRESS,
+            self.EventMask.KEY_PRESS,
+            self.on_key_press,
+            None,
+        )
         m.mlx_loop_hook(self.view.mlx_ptr, self.update_game, None)
 
     def close_game(self, *args):
@@ -102,7 +122,7 @@ class GameController:
         options = self.model.menu_options
         if not options:
             return
-            
+
         selected_text = options[self.model.selected_button_index]
         if selected_text in ("START", "RETRY"):
             self.model._load_level(is_first=True)
@@ -110,14 +130,18 @@ class GameController:
             self.model.player.score = 0
             self.model.player.state = PlayerState.ALIVE
             self.model.state = GameState.DEATH_PAUSE
-            
+
         elif selected_text == "SAVE SCORE":
-            name = self.model.name_input.strip() if self.model.name_input else "PLAYER"
-            self.model.highscore_manager.add_score(name, self.model.player.score)
+            name = "PLAYER"
+            if self.model.name_input:
+                name = self.model.name_input.strip()
+            self.model.highscore_manager.add_score(
+                name, self.model.player.score
+            )
             self.model.name_input = ""
             self.model.state = GameState.GAME_OVER
             self.model.selected_button_index = 0
-        
+
         elif selected_text == "RESUME":
             self.model.state = GameState.PLAYING
             self.last_time = time.perf_counter()
@@ -129,7 +153,7 @@ class GameController:
         elif selected_text == "INSTRUCTIONS":
             self.model.state = GameState.INSTRUCTIONS
             self.model.selected_button_index = 0
-            
+
         elif selected_text in ("MAIN MENU", "EXIT"):
             if selected_text == "EXIT":
                 self.close_game()
@@ -156,7 +180,10 @@ class GameController:
                 self.model.player.desired_dir = action
             elif keycode == self.Key.SIX:
                 self.model.state = GameState.CHEAT_MODE
-            elif keycode in (self.Key.ESC, 27, ord('p'), ord('P'), ord('q'), ord('Q')):
+            elif (
+                keycode in
+                (self.Key.ESC, 27, ord("p"), ord("P"), ord("q"), ord("Q"))
+            ):
                 self.model.state = GameState.PAUSE
                 self.model.selected_button_index = 0
 
@@ -186,8 +213,14 @@ class GameController:
                 if self.model.selected_button_index == 0:
                     self.model.selected_button_index = 1
                 else:
-                    self.model.selected_button_index = 3 - self.model.selected_button_index
-            elif (97 <= keycode <= 122) or (48 <= keycode <= 57) or keycode == self.Key.SPACE:
+                    self.model.selected_button_index = (
+                        3 - self.model.selected_button_index
+                    )
+            elif (
+                (97 <= keycode <= 122)
+                or (48 <= keycode <= 57)
+                or keycode == self.Key.SPACE
+            ):
                 if len(self.model.name_input) < 10:
                     self.model.name_input += chr(keycode).upper()
             elif keycode in (self.Key.BACKSPACE, 65288):
@@ -198,9 +231,14 @@ class GameController:
             GameState.START_MENU,
             GameState.HIGHSCORES,
             GameState.INSTRUCTIONS,
-            GameState.PAUSE
+            GameState.PAUSE,
         ):
-            if self.model.state == GameState.PAUSE and keycode in (self.Key.ESC, 27, ord('p'), ord('P')):
+            if self.model.state == GameState.PAUSE and keycode in (
+                self.Key.ESC,
+                27,
+                ord("p"),
+                ord("P"),
+            ):
                 self.model.state = GameState.PLAYING
                 self.last_time = time.perf_counter()
                 return 0
@@ -209,9 +247,13 @@ class GameController:
             num_buttons = len(options) if options else 1
 
             if action == Direction.UP:
-                self.model.selected_button_index = (self.model.selected_button_index - 1) % num_buttons
+                self.model.selected_button_index = (
+                    self.model.selected_button_index - 1
+                ) % num_buttons
             elif action == Direction.DOWN:
-                self.model.selected_button_index = (self.model.selected_button_index + 1) % num_buttons
+                self.model.selected_button_index = (
+                    self.model.selected_button_index + 1
+                ) % num_buttons
             elif keycode in (self.Key.ENTER, 13, self.Key.SPACE):
                 self._handle_menu_selection()
 
@@ -221,7 +263,7 @@ class GameController:
         current_time = time.perf_counter()
         dt = current_time - self.last_time
         frame_duration = 1.0 / self.config.target_fps
-        
+
         if dt < frame_duration:
             return 0
 

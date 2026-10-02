@@ -1,22 +1,15 @@
 import sys
 from .config_parser import ConfigParser
 from .controller import GameController
-from mazegenerator import MazeGenerator
 
-# MazeGenerator(
-    # size: tuple[int, int] = (15, 15), 
-    # perfect: bool = False, 
-    # entry_cell: tuple[int, int] = (0, 0), 
-    # exit_cell: tuple[int, int] = (-1, -1), 
-    # seed: int = 0
-# ) -> None
 
 def main() -> None:
     """Entry point for the Pac-Man game."""
     argv = sys.argv
     if len(argv) != 2:
-        print("Usage: 'make run' "
-              "or 'uv run python -m src.pac_man config.json'"
+        print(
+            "Usage: 'make run' "
+            "or 'uv run python -m src.pac_man config.json'"
         )
         return
 
@@ -28,13 +21,12 @@ def main() -> None:
 
     game = GameController(config_data=config.data)
     game.run()
-    
-    #maze = MazeGenerator(seed=42)
-    #repr(maze)
-    #for line in maze._maze:
-    #    print(line)
 
 
 if __name__ == "__main__":
-    main()
-    # help(MazeGenerator)
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit(0)
+    except Exception:
+        sys.exit(1)

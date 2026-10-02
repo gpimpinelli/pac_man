@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 from pydantic import BaseModel, Field, model_validator
 
-
 NUMERIC_RULES: dict[str, dict[str, int]] = {
     "lives": {"default": 3, "min": 1, "max": 9},
     "seed": {"default": 42, "min": 0, "max": 2_147_483_647},
@@ -125,8 +124,8 @@ class ConfigParser(BaseModel):
         hs_file = self.data.get("highscore_filename")
         if not isinstance(hs_file, str) or not hs_file.strip():
             print(
-                "[CONFIG WARNING] Key 'highscore_filename' missing or invalid, "
-                "using default: 'highscores.json'"
+                "[CONFIG WARNING] Key 'highscore_filename' missing or "
+                "invalid, using default: 'highscores.json'"
             )
             self.data["highscore_filename"] = "highscores.json"
 
@@ -154,9 +153,10 @@ class ConfigParser(BaseModel):
             width = lvl.get("width")
             height = lvl.get("height")
 
-            # Checking 'width': must be int, >= 15 and odd
-            if (not isinstance(width, int) or isinstance(width, bool)
-                    or width < 15):
+            if (
+                not isinstance(width, int)
+                or isinstance(width, bool) or width < 15
+            ):
                 print(
                     f"[CONFIG WARNING] Level #{i + 1} "
                     f"'width' ({width!r}) invalid, defaulting to 15."
@@ -170,8 +170,10 @@ class ConfigParser(BaseModel):
                 width += 1
 
             # Checking 'height': must be int, >= 15 and odd
-            if (not isinstance(height, int) or isinstance(height, bool)
-                    or height < 15):
+            if (
+                not isinstance(height, int)
+                or isinstance(height, bool) or height < 15
+            ):
                 print(
                     f"[CONFIG WARNING] Level #{i + 1} "
                     f"'height' ({height!r}) invalid, defaulting to 15."
@@ -198,18 +200,3 @@ class ConfigParser(BaseModel):
             validated_levels.append({"width": size, "height": size})
 
         self.data["levels"] = validated_levels
-
-
-if __name__ == "__main__":
-    import sys
-
-    config_file = (
-        sys.argv[1] if len(sys.argv) > 1 else "tests/test_config_faulty.json"
-    )
-
-    print(f"--- Test parsing di: {config_file} ---")
-    test_parser = ConfigParser(path=Path(config_file))
-
-    print("\nConfigurazione risultante:")
-    for k, v in test_parser.data.items():
-        print(f"  {k}: {v}")

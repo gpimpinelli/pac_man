@@ -42,7 +42,7 @@ class ViewLayout:
 
     @classmethod
     def from_window_size(
-        cls, width: int, height: int, main_tile_size: int = 48
+        cls, width: int, height: int, main_tile_size: int = 38
     ) -> "ViewLayout":
         return cls(
             main_tile_size=main_tile_size,

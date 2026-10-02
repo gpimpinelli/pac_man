@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-import os
 from typing import Any
 import mlx
 from .sprites_manager import SpriteManager
@@ -47,13 +46,13 @@ Collect regular dots (Pac-Gums) to gain score.
 Collect corner Super Pac-Gums to turn ghosts blue!
 While blue, ghosts will flee: touch them to eat
 them and send them back to their corner!
-You start with 3 lives. Colliding with a normal 
+You start with 3 lives. Colliding with a normal
 ghost costs 1 life and respawns you in the center."""
 
     def __init__(self, config: Any, layout: ViewLayout | None = None) -> None:
         self.config = config
-        self.layout = layout or ViewLayout.from_window_size(
-            config.width, config.height
+        self.layout = (
+            layout or ViewLayout.from_window_size(config.width, config.height)
         )
 
         self.m = mlx.Mlx()
@@ -63,13 +62,16 @@ ghost costs 1 life and respawns you in the center."""
         self.sprites = SpriteManager(self.m, self.mlx_ptr)
 
         self.win_ptr = self.m.mlx_new_window(
-            self.mlx_ptr, self.config.width, self.config.height, self.config.title
+            self.mlx_ptr,
+            self.config.width,
+            self.config.height,
+            self.config.title
         )
         self.img = self.m.mlx_new_image(
             self.mlx_ptr, self.config.width, self.config.height
         )
-        self.data, self.bfp, self.size_line, _ = self.m.mlx_get_data_addr(
-            self.img
+        self.data, self.bfp, self.size_line, _ = (
+            self.m.mlx_get_data_addr(self.img)
         )
 
         self.bytes_per_pixel = self.bfp // 8
@@ -83,8 +85,7 @@ ghost costs 1 life and respawns you in the center."""
         self._bg_buffer = bg_bytes * (self.buffer_size // self.bytes_per_pixel)
 
         self.main_renderer = Renderer(
-            self,
-            tile_size=self.layout.main_tile_size
+            self, tile_size=self.layout.main_tile_size
         )
         self.active_buttons: list[MenuButton] = []
 
@@ -159,9 +160,10 @@ ghost costs 1 life and respawns you in the center."""
         menu_w = self.config.width - (menu.padding_x * 2)
         menu_h = self.config.height - (menu.padding_y * 2)
 
-        line_height = (
-            menu.line_h_highscores if is_highscores else menu.line_h_normal
-        )
+        line_height = menu.line_h_normal
+        if is_highscores:
+            line_height = menu.line_h_highscores
+
         total_text_height = len(text) * line_height
         start_y = menu.padding_y + max(20, (menu_h - total_text_height) // 2)
 
@@ -193,8 +195,8 @@ ghost costs 1 life and respawns you in the center."""
         menu_h = self.config.height - (menu.padding_y * 2)
 
         num_buttons = len(button_lst)
-        total_block_height = (num_buttons * menu.btn_h) + (
-            (num_buttons - 1) * menu.gap
+        total_block_height = (
+            (num_buttons * menu.btn_h) + (num_buttons - 1) * menu.gap
         )
         start_x = menu.padding_x + ((menu_w - menu.btn_w) // 2)
         start_y = menu.padding_y + ((menu_h - total_block_height) // 2)
@@ -206,12 +208,6 @@ ghost costs 1 life and respawns you in the center."""
 
             if is_enter_name and i == 0:
                 draw_bg = False
-            elif is_enter_name and i == 1:
-                color = (
-                    Colors.BUTTON_NORMAL
-                    if i != selected_index
-                    else Colors.BUTTON_HOVER
-                )
             elif i == selected_index:
                 color = Colors.BUTTON_HOVER
 
@@ -234,7 +230,7 @@ ghost costs 1 life and respawns you in the center."""
             )
 
     def clear(self) -> None:
-        self.data[0 : self.buffer_size] = self._bg_buffer
+        self.data[0: self.buffer_size] = self._bg_buffer
 
     def draw_rect_fast(
         self, coords: tuple[int, int], w: int, h: int, color: int
@@ -257,14 +253,19 @@ ghost costs 1 life and respawns you in the center."""
 
         for row in range(y0, y1):
             start = row * self.size_line + x0 * self.bytes_per_pixel
-            self.data[start : start + row_len] = row_bytes
+            self.data[start:start + row_len] = row_bytes
 
     def print_game_info(self, x: int, y: int, text: list[str]) -> None:
         line_height = self.layout.hud.line_height
         for i, line in enumerate(text):
             text_y = int(y) + (line_height * i)
             self.m.mlx_string_put(
-                self.mlx_ptr, self.win_ptr, int(x), text_y, Colors.TEXT_WHITE, line
+                self.mlx_ptr,
+                self.win_ptr,
+                int(x),
+                text_y,
+                Colors.TEXT_WHITE,
+                line
             )
 
     def draw_main_sprites(self, model: GameModel) -> None:
@@ -294,7 +295,9 @@ ghost costs 1 life and respawns you in the center."""
             current_ghost_sprite = None
 
             if ghost.state in (GhostState.CHASE, GhostState.SCATTER):
-                g_dir = ghost.current_dir if ghost.current_dir else Direction.UP
+                g_dir = (
+                    ghost.current_dir if ghost.current_dir else Direction.UP
+                )
                 current_ghost_sprite = self.sprites.ghosts_normal[i][g_dir]
             elif ghost.state == GhostState.FRIGHTENED:
                 current_ghost_sprite = self.sprites.frightened
@@ -318,8 +321,12 @@ ghost costs 1 life and respawns you in the center."""
         ratio = self.minimap_renderer.tile_size / self.main_renderer.tile_size
         offset = self.layout.minimap.sprite_offset
 
-        mini_px = int(self.minimap_renderer.offset_x + (model.player.x * ratio))
-        mini_py = int(self.minimap_renderer.offset_y + (model.player.y * ratio))
+        mini_px = int(
+            self.minimap_renderer.offset_x + (model.player.x * ratio)
+        )
+        mini_py = int(
+            self.minimap_renderer.offset_y + (model.player.y * ratio)
+        )
         self.m.mlx_put_image_to_window(
             self.mlx_ptr,
             self.win_ptr,
@@ -329,12 +336,8 @@ ghost costs 1 life and respawns you in the center."""
         )
 
         for ghost in model.ghosts:
-            mini_gx = int(
-                self.minimap_renderer.offset_x + (ghost.x * ratio)
-            )
-            mini_gy = int(
-                self.minimap_renderer.offset_y + (ghost.y * ratio)
-            )
+            mini_gx = int(self.minimap_renderer.offset_x + (ghost.x * ratio))
+            mini_gy = int(self.minimap_renderer.offset_y + (ghost.y * ratio))
             self.m.mlx_put_image_to_window(
                 self.mlx_ptr,
                 self.win_ptr,

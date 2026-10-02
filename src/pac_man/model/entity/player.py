@@ -4,8 +4,8 @@ from enum import Enum, auto
 
 class PlayerState(Enum):
     ALIVE = auto()
-    DYING = auto()  # Durante l'animazione in cui Pac-Man si chiude su se stesso
-    DEAD = auto()   # Quando l'animazione è finita, in attesa di respawn
+    DYING = auto()
+    DEAD = auto()
 
 
 class Player(Entity):
@@ -28,14 +28,14 @@ class Player(Entity):
     @property
     def has_lives(self) -> bool:
         return self.lives > 0
-    
+
     def toggle_invincible(self) -> bool:
         self.is_invincible = not self.is_invincible
-    
+
     def add_lives(self) -> None:
         if self.lives < 7:
             self.lives += 1
-    
+
     def increase_player_speed(self) -> None:
         if self.speed < 300:
             self.speed += 10

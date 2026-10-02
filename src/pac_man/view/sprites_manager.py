@@ -2,13 +2,12 @@ import os
 from typing import Any
 from ..model import Direction
 
+
 class SpriteManager:
-    """Gestisce il caricamento e la memorizzazione di tutti gli asset grafici."""
-    
     def __init__(self, mlx: Any, mlx_ptr: Any):
         self.m = mlx
         self.mlx_ptr = mlx_ptr
-        
+
         current_dir = os.path.dirname(os.path.abspath(__file__))
         self.sprites_dir = os.path.join(current_dir, "sprites")
         self.mini_sprites_dir = os.path.join(self.sprites_dir, "mini")
@@ -23,12 +22,14 @@ class SpriteManager:
         ghost_colors = ["red", "pink", "blu", "orange"]
         self.ghosts_normal = []
         for color in ghost_colors:
-            self.ghosts_normal.append({
-                Direction.UP: self._load(f"{color}_up.xpm"),
-                Direction.DOWN: self._load(f"{color}_down.xpm"),
-                Direction.LEFT: self._load(f"{color}_left.xpm"),
-                Direction.RIGHT: self._load(f"{color}_right.xpm"),
-            })
+            self.ghosts_normal.append(
+                {
+                    Direction.UP: self._load(f"{color}_up.xpm"),
+                    Direction.DOWN: self._load(f"{color}_down.xpm"),
+                    Direction.LEFT: self._load(f"{color}_left.xpm"),
+                    Direction.RIGHT: self._load(f"{color}_right.xpm"),
+                }
+            )
 
         self.frightened = self._load("ghost_eaten.xpm")
         self.eaten = self._load("eaten.xpm")

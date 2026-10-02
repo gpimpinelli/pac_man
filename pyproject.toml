@@ -24,3 +24,10 @@ build-backend = "uv_build"
 [tool.uv.sources]
 mazegenerator = { path = "mazegenerator-2.1.0-py3-none-any.whl" }
 mlx = { path = "mlx-2.2/ubuntu/mlx-2.2-py3-none-any.whl" }
+
+[dependency-groups]
+dev = [
+    "black>=26.5.1",
+    "flake8>=7.4.1",
+    "mypy>=2.4.0",
+]

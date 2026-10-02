@@ -8,5 +8,5 @@ __all__ = [
     "GameModel",
     "GameState",
     "HighscoreManager",
-    "Direction"
+    "Direction",
 ]

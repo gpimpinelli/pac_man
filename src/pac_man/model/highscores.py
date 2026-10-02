@@ -5,17 +5,18 @@ from pydantic import BaseModel, model_validator
 
 class HighscoreManager(BaseModel):
     """It manages the persistency and validation of the record's ranking
- 
-        Initialization of the record's manager and existent scores loader
-        Args:
-            filepath (str | Path): Path to the scores JSON file.
-        """
+
+    Initialization of the record's manager and existent scores loader
+    Args:
+        filepath (str | Path): Path to the scores JSON file.
+    """
+
     filepath: Path = Path("highscore.json")
     scores: list[dict[str, object]] = []
 
     is_new_highscore: bool = False
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def init_load(self) -> "HighscoreManager":
         self.load()
         return self
@@ -28,9 +29,7 @@ class HighscoreManager(BaseModel):
             with self.filepath.open("r", encoding="utf-8") as f:
                 raw_data = json.load(f)
         except (json.JSONDecodeError, OSError):
-            print(
-                "[WARNING] Record file not valid, standings reset"
-            )
+            print("[WARNING] Record file not valid, standings reset")
             self.scores = []
             return
 
@@ -60,16 +59,16 @@ class HighscoreManager(BaseModel):
     @property
     def top_scores_text(self) -> list[str]:
         scores_list = self.scores
-        
+
         if not scores_list:
             return ["NO SCORES YET"]
-            
+
         formatted_scores = []
         for i, item in enumerate(scores_list):
             name = item.get("name", "PLAYER")
             score = item.get("score", 0)
             formatted_scores.append(f"{i + 1:2}. {name:<10} - {score:05}")
-            
+
         return formatted_scores
 
     def _sanitize_name(self, name: object) -> str:
@@ -94,9 +93,7 @@ class HighscoreManager(BaseModel):
             with self.filepath.open("w", encoding="utf-8") as f:
                 json.dump(self.scores, f, indent=4)
         except OSError as e:
-            print(
-                f"[ERROR] Could not save highscores to {self.filepath}: {e}"
-            )
+            print(f"[ERROR] Could not save highscores to {self.filepath}: {e}")
 
     def is_highscore(self, score: int) -> bool:
         """Checks if a score qualifies for the top 10 rankings.
@@ -112,15 +109,16 @@ class HighscoreManager(BaseModel):
         return score > int(self.scores[-1]["score"])
 
     def add_score(self, name: str, score: int) -> bool:
+
+        def _score(x):
+            s = x.get("score")
+            return s if isinstance(s, int) else 0
+
         if not self.is_highscore(score):
             return False
         clean_name = self._sanitize_name(name)
         self.scores.append({"name": clean_name, "score": score})
-        self.scores.sort(
-            key=lambda item: item["score"]
-            if isinstance(item["score"], int) else 0,
-            reverse=True
-        )
+        self.scores.sort(key=_score, reverse=True)
         self.scores = self.scores[:10]
         self.save()
         return True
