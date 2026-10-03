@@ -21,7 +21,6 @@ class Ghost(Entity):
     is_frozen: bool = False
     initial_speed: float = 0.0
 
-
     @property
     def is_already_eaten(self) -> bool:
         """Check if the ghost have state = GhostState.EATEN"""
@@ -158,9 +157,9 @@ class Ghost(Entity):
                 spawn_cell = pixel_to_cell(
                     self.coords_spawn, (0, 0), game_state.tile_size
                 )
-                
-                path = game_state.maze.breath_first_search(current_cell, spawn_cell)
-                
+                path = game_state.maze.breath_first_search(
+                    current_cell, spawn_cell
+                )
                 if path and len(path) > 1:
                     next_step = path[1]
                     dx = next_step[0] - current_cell[0]
@@ -182,7 +181,6 @@ class Ghost(Entity):
                         self.desired_dir = possible_dirs[0]
                 else:
                     self.desired_dir = random.choice(possible_dirs)
-
 
         self.last_decision_cell = (col, row)
 

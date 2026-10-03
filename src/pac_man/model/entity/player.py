@@ -1,6 +1,5 @@
 from .entity import Entity
 from enum import Enum, auto
-from typing import Any
 
 
 class PlayerState(Enum):

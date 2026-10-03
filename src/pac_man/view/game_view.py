@@ -294,7 +294,9 @@ ghost costs 1 life and respawns you in the center."""
             current_ghost_sprite = None
 
             if ghost.state in (GhostState.CHASE, GhostState.SCATTER):
-                g_dir = ghost.current_dir if ghost.current_dir is not None else Direction.UP
+                g_dir = Direction.UP
+                if ghost.current_dir:
+                    g_dir = ghost.current_dir
                 current_ghost_sprite = self.sprites.ghosts_normal[i].get(
                     g_dir, self.sprites.ghosts_normal[i][Direction.UP]
                 )

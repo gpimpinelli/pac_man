@@ -142,7 +142,7 @@ class GameModel(BaseModel):
     def _calc_rail(self, entity: Entity) -> tuple[float, float]:
         col, row = pixel_to_cell((entity.x, entity.y), (0, 0), self.tile_size)
         return (
-            float((col + 0.5) * self.tile_size), 
+            float((col + 0.5) * self.tile_size),
             float((row + 0.5) * self.tile_size)
         )
 

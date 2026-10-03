@@ -205,7 +205,7 @@ class MazeAdapter:
                 if n_coords not in came_from:
                     queue.append(self.get_cell(n_coords[0], n_coords[1]))
                     came_from[n_coords] = current.coords
-        
+
         if dest_cell.coords not in came_from:
             return []
 
@@ -217,7 +217,7 @@ class MazeAdapter:
             current_step = came_from.get(current_step)
 
         path.reverse()
-        
+
         return path
 
     def get_cell(self, x: int, y: int) -> Cell | None:
