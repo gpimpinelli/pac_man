@@ -192,7 +192,7 @@ class GameController:
                 case self.Key.TWO:
                     self.model.level_skip()
                 case self.Key.THREE:
-                    self.model.freeze_ghosts()
+                    self.model._freeze_ghosts()
                 case self.Key.FOUR:
                     self.model.increase_speed()
                 case self.Key.FIVE:

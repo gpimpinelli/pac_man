@@ -29,7 +29,7 @@ class Player(Entity):
     def has_lives(self) -> bool:
         return self.lives > 0
 
-    def toggle_invincible(self) -> bool:
+    def toggle_invincible(self) -> None:
         self.is_invincible = not self.is_invincible
 
     def add_lives(self) -> None:

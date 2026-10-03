@@ -163,7 +163,7 @@ class GameModel(BaseModel):
             return ("ENTER TO GO BACK",)
         return ()
 
-    def remove_super(self):
+    def remove_super(self) -> None:
         self.player.remove_super()
         self._change_ghosts_state(GhostState.CHASE)
 
