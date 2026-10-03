@@ -1,13 +1,28 @@
+"""Renderer module drawing maze geometry, corridors, and pellets."""
+
+from typing import TYPE_CHECKING
 from ..model import MazeAdapter
 from .colors import Colors
 from pac_man.utils import cell_to_pixel, center_in_pixel
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .game_view import GameView
 
 
 class Renderer:
+    """Renders maze corridors, walls, and pellets within a specified viewport.
+
+    Attributes:
+        view (GameView): Parent view instance containing image buffers.
+        view_x (int): Horizontal pixel offset of this viewport.
+        view_y (int): Vertical pixel offset of this viewport.
+        view_w (int | None): Custom viewport width or None for full screen.
+        view_h (int | None): Custom viewport height or None for full screen.
+        tile_size (int): Size of individual maze cells in pixels.
+        offset_x (int): Computed horizontal centering offset.
+        offset_y (int): Computed vertical centering offset.
+    """
+
     def __init__(
         self,
         view: "GameView",
@@ -17,6 +32,16 @@ class Renderer:
         view_h: int | None = None,
         tile_size: int = 40,
     ) -> None:
+        """Initialize renderer viewport geometry and tile scaling.
+
+        Args:
+            view (GameView): Target view container.
+            view_x (int): Left origin coordinate.
+            view_y (int): Top origin coordinate.
+            view_w (int | None): Bounding box width.
+            view_h (int | None): Bounding box height.
+            tile_size (int): Dimension of each cell in pixels.
+        """
         self.view: "GameView" = view
 
         self.view_x = view_x
@@ -29,6 +54,11 @@ class Renderer:
         self.offset_y: int = 0
 
     def update_layout(self, maze: MazeAdapter) -> None:
+        """Recalculate maze centering offsets based on viewport dimensions.
+
+        Args:
+            maze (MazeAdapter): Active maze adapter.
+        """
         screen_w = (
             self.view_w if self.view_w is not None else self.view.config.width
         )
@@ -44,6 +74,11 @@ class Renderer:
         )
 
     def draw_maze(self, maze: MazeAdapter) -> None:
+        """Rasterize maze walls, solid cells, and pacgums into backbuffer.
+
+        Args:
+            maze (MazeAdapter): Maze adapter providing grid and pellet data.
+        """
         # self.update_layout(maze)
         # Optimization: save the method's refernce in a local variable
         draw_rect = self.view.draw_rect_fast

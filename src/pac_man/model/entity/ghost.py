@@ -1,13 +1,17 @@
+"""Ghost entity representation and AI behaviors for Pac-Man."""
+
 import math
 import random
+from enum import Enum, auto
+from typing import Any
+from pac_man.utils import pixel_to_cell
 from .entity import Entity
 from .direction import Direction
-from enum import Enum, auto
-from pac_man.utils import pixel_to_cell
-from typing import Any
 
 
 class GhostState(Enum):
+    """Behavioral states of a ghost entity."""
+
     SCATTER = auto()
     CHASE = auto()
     FRIGHTENED = auto()
@@ -15,6 +19,17 @@ class GhostState(Enum):
 
 
 class Ghost(Entity):
+    """Represents a ghost antagonist with state-driven AI movement.
+
+    Attributes:
+        state (GhostState): Current behavioral AI state.
+        last_decision_cell (tuple[int, int]): Grid coordinates where the last
+            routing decision was evaluated.
+        respawn_timer (float): Time remaining before ghost returns to action.
+        is_frozen (bool): Cheat flag freezing ghost movement.
+        initial_speed (float): Ghost speed before freezing.
+    """
+
     state: GhostState = GhostState.SCATTER
     last_decision_cell: tuple[int, int] = (-1, -1)
     respawn_timer: float = 0.0
@@ -23,10 +38,15 @@ class Ghost(Entity):
 
     @property
     def is_already_eaten(self) -> bool:
-        """Check if the ghost have state = GhostState.EATEN"""
+        """Check whether the ghost has been eaten and is returning to spawn.
+
+        Returns:
+            bool: True if the ghost state is EATEN, False otherwise.
+        """
         return self.state == GhostState.EATEN
 
     def freeze(self) -> None:
+        """Toggle freeze cheat mode, pausing or restoring ghost speed."""
         self.is_frozen = not self.is_frozen
         if self.is_frozen:
             if self.speed > 0:
@@ -44,7 +64,16 @@ class Ghost(Entity):
         cell_row: int,
         short: bool = True,
     ) -> None:
+        """Evaluate candidate directions and choose the best path to target.
 
+        Args:
+            game_state (Any): Current game model context.
+            possible_dirs (list[Direction]): List of non-blocked directions.
+            cell_col (int): Target column grid coordinate.
+            cell_row (int): Target row grid coordinate.
+            short (bool): True to minimize distance (chase), False to maximize
+                distance (flee).
+        """
         curr_coords = pixel_to_cell(
             (self.x, self.y), (0, 0), game_state.tile_size
         )
@@ -74,6 +103,11 @@ class Ghost(Entity):
         self.desired_dir = best_dir
 
     def update_intention(self, game_state: Any) -> None:
+        """Update ghost movement intention based on state and maze geometry.
+
+        Args:
+            game_state (Any): Current game model or state context.
+        """
         if self.is_frozen:
             self.desired_dir = None
             return

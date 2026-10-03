@@ -1,68 +1,109 @@
-*This project has been created as part of the 42 curriculum by gipimpin - gpecelli*
+*This project has been created as part of the 42 curriculum by gipimpin, gpecelli.*
 
 # 🟡 Pac-Man 42
 
-A Pac-Man clone built in Python using the **MiniLibX (mlx)** library, following the MVC architectural pattern. Mazes are procedurally generated each game using a configurable seed.
+A complete, robust recreation of the legendary 1980 arcade game **Pac-Man**, implemented in Python 3.10+ using the **MiniLibX (mlx)** graphical library following a strict **Model-View-Controller (MVC)** software architecture. The game features procedurally generated mazes via external package integration, intelligent ghost state machines, a persistent highscore system, smooth frame-throttled rendering, and evaluation-ready cheat modes.
 
 ---
 
-## 📋 Requirements
+## 📖 Table of Contents
 
-- Linux / WSL (Ubuntu 24.04 recommended)
-- Python 3.10+
-- [`uv`](https://github.com/astral-sh/uv) package manager
+- [Description](#-description)
+- [Instructions & Setup](#-instructions--setup)
+- [Configuration](#-configuration)
+- [Highscore System](#-highscore-system)
+- [Maze Generation](#-maze-generation)
+- [Implementation Details](#-implementation-details)
+- [General Software Architecture](#-general-software-architecture)
+- [Game Controls & Cheat Mode](#-game-controls--cheat-mode)
+- [Project Management](#-project-management)
+- [Resources & AI Usage](#-resources--ai-usage)
 
 ---
 
-## 🚀 Quick Start
+## 📝 Description
+
+**Pac-Man 42** reimagines Namco's timeless arcade classic with modern software engineering practices. The player navigates Pac-Man through complex procedurally generated labyrinths, consuming Pac-Gums and Super Pac-Gums while evading four autonomous ghosts with distinct behavioral states (Chase, Scatter, Frightened, and Eaten).
+
+### Key Features
+- **Strict MiniLibX Rendering:** Ultra-fast software frame buffer manipulating direct BGRA bytearrays pushed via `mlx_put_image_to_window`.
+- **Procedural Level Progression:** 10+ progressively challenging maze levels generated using an external generator package.
+- **Classic Arcade AI:** Multi-state ghost behaviors with Breadth-First Search (BFS) shortest-path navigation for eaten ghost eyes returning to their home base.
+- **Fail-Safe Design:** Fault-tolerant JSON parser that gracefully handles missing files, malformed syntax, and out-of-range parameters with zero tracebacks.
+- **Evaluation-Ready Cheat Mode:** Peer-review debugging tools to toggle invincibility, skip levels, freeze ghosts, adjust speed, and grant extra lives.
+
+---
+
+## 🚀 Instructions & Setup
+
+### Requirements
+- **OS:** Linux / WSL (Ubuntu 24.04 recommended)
+- **Python:** Version 3.10 or later
+- **Package Manager:** [`uv`](https://github.com/astral-sh/uv) (recommended) or `pip`
+
+### Installation
+
+Clone the repository and install all dependencies:
 
 ```bash
-# 1. Install dependencies
 make install
+```
 
-# 2. Run the game
+*(Alternatively using uv directly: `uv sync`)*
+
+### Execution
+
+Run the game with the default configuration (`config.json`):
+
+```bash
 make run
 ```
 
-> The game reads `config.json` from the project root by default.  
-> You can also pass a custom config file directly:
-> ```bash
-> uv run python -m src.pac_man my_config.json
-> ```
+As specified in the subject (Chapter V.1), the program accepts a configuration JSON file as its sole command-line argument:
+
+```bash
+# Standard Python launch
+python3 -m src.pac_man config.json
+
+# Using uv
+uv run python -m src.pac_man path/to/custom_config.json
+```
+
+### Make Targets
+
+| Target | Description |
+|---|---|
+| `make install` | Installs project dependencies using `uv sync` |
+| `make run` | Launches the game with `config.json` |
+| `make debug` | Runs the game under the Python debugger (`pdb`) |
+| `make clean` | Removes temporary caches (`__pycache__`, `.mypy_cache`, `uv` cache) |
+| `make lint` | Runs `flake8` and `mypy` with non-strict configuration |
+| `make lint-strict` | Runs `flake8` and strict static typing check (`mypy --strict`) across all files |
 
 ---
 
-## 🎮 Controls
+## ⚙️ Configuration
 
-| Action         | Keys                        |
-|----------------|-----------------------------|
-| Move Up        | `W` or `↑`                  |
-| Move Down      | `S` or `↓`                  |
-| Move Left      | `A` or `←`                  |
-| Move Right     | `D` or `→`                  |
-| Navigate Menu  | `↑` / `↓`                   |
-| Confirm / Enter| `ENTER` or `SPACE`          |
-| Quit           | `ESC` or `Q`                |
+The game behavior is fully customizable via a JSON configuration file. In compliance with project specifications, the parser strips line comments starting with `#` or `//`.
 
----
-
-## ⚙️ Configuration — `config.json`
-
-All game parameters are controlled via `config.json` in the project root.  
-The file supports `//` and `#` line comments.  
-Invalid or missing values are automatically **clamped to safe defaults** — the game will never crash due to a bad config.
-
-### Full example
+### Example `config.json`
 
 ```json
 {
+    // Highscore persistence file
     "highscore_filename": "highscores.json",
+    
+    // Core gameplay settings
     "lives": 3,
     "seed": 42,
-    "level_max_time": 180,
+    "level_max_time": 90,
+    
+    // Scoring rules
     "points_per_pacgum": 10,
     "points_per_super_pacgum": 50,
     "points_per_ghost": 200,
+    
+    // Level definitions (minimum 10 levels required)
     "levels": [
         { "width": 15, "height": 15 },
         { "width": 15, "height": 15 },
@@ -79,84 +120,169 @@ Invalid or missing values are automatically **clamped to safe defaults** — the
 }
 ```
 
-### Parameter reference
+### Parameter Reference & Clamping Limits
+
+All parameters are validated and automatically **clamped to safe defaults** if missing, malformed, or out of bounds. The application will never crash or raise an unhandled traceback due to invalid configuration.
 
 | Key | Type | Default | Min | Max | Description |
-|-----|------|---------|-----|-----|-------------|
-| `lives` | `int` | `3` | `1` | `9` | Number of lives at game start |
-| `seed` | `int` | `42` | `0` | `2147483647` | Maze generation seed — same seed = same maze every time |
-| `level_max_time` | `int` | `90` | `10` | `3600` | Time limit per level in **seconds** |
-| `points_per_pacgum` | `int` | `10` | `0` | `100000` | Points earned per regular Pac-Gum eaten |
-| `points_per_super_pacgum` | `int` | `50` | `0` | `100000` | Points earned per Super Pac-Gum eaten |
-| `points_per_ghost` | `int` | `200` | `0` | `100000` | Points earned per ghost eaten while frightened |
-| `highscore_filename` | `string` | `"highscores.json"` | — | — | Path to the highscores save file |
-| `levels` | `array` | *(see below)* | — | — | List of level definitions (minimum 10 required) |
-
-### Levels
-
-Each level entry defines the **maze size**:
-
-```json
-{ "width": 15, "height": 15 }
-```
-
-- Both `width` and `height` must be **odd integers ≥ 15** (required by the maze generator).
-- If an even number is provided, it is automatically incremented by 1.
-- The game requires **at least 10 levels**. If fewer are defined, defaults are added automatically.
-
-### Screen size & resolution
-
-The window size is currently fixed at **1640 × 1000 px** and is designed for Full HD screens or larger.  
-If you need to adapt it to a smaller screen, edit the `GameConfig` in [`src/pac_man/controller/game_controller.py`](src/pac_man/controller/game_controller.py):
-
-```python
-# Line ~93 — change width and height to match your screen
-self.config = GameConfig(width=1640, height=1000, target_fps=60)
-```
-
-> **Tip:** The maze and tile sizes scale automatically based on window dimensions, so the game adapts to any resolution you set here.
+|---|---|---|---|---|---|
+| `lives` | `int` | `3` | `1` | `9` | Starting lives count |
+| `seed` | `int` | `42` | `0` | `2,147,483,647` | Base seed for level 1 procedural generation |
+| `level_max_time` | `int` | `90` | `10` | `3600` | Countdown timer per level in seconds |
+| `points_per_pacgum` | `int` | `10` | `0` | `100,000` | Points awarded per standard Pac-Gum |
+| `points_per_super_pacgum` | `int` | `50` | `0` | `100,000` | Points awarded per Super Pac-Gum |
+| `points_per_ghost` | `int` | `200` | `0` | `100,000` | Points awarded per ghost eaten while frightened |
+| `highscore_filename` | `str` | `"highscores.json"` | — | — | Path to the highscores file |
+| `levels` | `list` | *10 levels* | 10 lvls | — | List of dimensions (`width`, `height` must be odd integers $\ge 15$) |
 
 ---
 
-## 🛠️ Make targets
+## 🏆 Highscore System
 
-| Command | Description |
-|---------|-------------|
-| `make install` | Install all Python dependencies via `uv` |
-| `make run` | Run the game with `config.json` |
-| `make debug` | Run the game under the Python debugger (`pdb`) |
-| `make clean` | Remove `__pycache__`, `.mypy_cache` and `uv` cache |
-| `make lint` | Run `flake8` + `mypy` (standard) |
-| `make lint-strict` | Run `flake8` + `mypy --strict` |
+The game implements a persistent top 10 highscore leaderboard stored in JSON format (`highscores.json`).
 
----
-
-## 📁 Project structure
-
-```
-pac_man/
-├── config.json              ← Game configuration
-├── highscores.json          ← Saved high scores
-├── Makefile
-├── en.subject.pdf
-└── src/pac_man/
-    ├── __main__.py          ← Entry point
-    ├── config_parser.py     ← JSON config loader & validator
-    ├── controller/
-    │   └── game_controller.py
-    ├── model/               ← Game logic (maze, entities, physics)
-    └── view/
-        ├── game_view.py     ← Rendering & MLX interface
-        ├── colors.py        ← Color palette
-        └── sprites/         ← XPM sprite files
-```
+### Implementation & Rationale
+- **Why JSON:** Chosen for transparency, human-readability, cross-platform portability, and seamless serialization without external database dependencies.
+- **Data Validation & Sanitization:**
+  - Player names are strictly sanitized to a maximum of **10 characters**, containing only alphanumeric characters and spaces (`char.isalnum() or char == ' '`).
+  - Blank or invalid entries default to `"PLAYER"`.
+  - Scores are validated as non-negative integers (`int >= 0`).
+- **Resilience:** If the highscores file is missing, empty, or corrupted, the system safely initializes an empty standings list, logs a warning, and saves a clean file without interrupting gameplay.
+- **Workflow:** Highscores are loaded at launch, displayed in the dedicated **Highscores Menu**, updated upon game completion (victory or game over), and persisted back to disk immediately.
 
 ---
 
-## 🎯 How to play
+## 🌀 Maze Generation
 
-1. **Eat all Pac-Gums** (dots) in the maze to complete the level and advance.
-2. **Super Pac-Gums** (corner dots) turn all ghosts **blue and frightened** — chase and eat them for bonus points!
-3. **Avoid ghosts** in normal state — each collision costs one life.
-4. If you run out of lives or time, it's **Game Over**.
-5. At game over, you can **save your name and score** to the highscores board.
+Level mazes are produced using the external `mazegenerator` wheel package (`mazegenerator-2.1.0-py3-none-any.whl`), integrated strictly as-is without any modifications to its internal code.
+
+### Integration Strategy (`MazeAdapter`)
+- **Corridor Compatibility (`PERFECT = False`):** Standard perfect mazes have exactly one path between any two points (no loops). Pac-Man gameplay requires loops and alternate escape routes; the adapter enforces `perfect=False` to create authentic intersecting corridors.
+- **Bitmask Conversion:** The external generator outputs raw integers encoding 4-bit wall masks (`NORTH = 1`, `EAST = 2`, `SOUTH = 4`, `WEST = 8`). `MazeAdapter` translates these bitmasks into discrete `Cell` objects with queryable wall properties.
+- **Seed Predictability:** Level 1 is deterministically generated using the seed specified in `config.json` (for reproducible evaluation). Subsequent levels dynamically vary their seeds.
+- **Entity & Item Spawning:**
+  - Pac-Man spawns in the center corridor `(width // 2, height // 2)`.
+  - The 4 ghosts spawn in the 4 corners `(0, 0)`, `(width - 1, 0)`, `(0, height - 1)`, and `(width - 1, height - 1)`.
+  - Super Pac-Gums are placed at the ghost corner spawn coordinates.
+  - Standard Pac-Gums are distributed across all non-solid, traversable corridors.
+- **Fallback Safety:** If the external generator encounters an unexpected error, a fallback corridor grid is instantiated to guarantee that the game never crashes.
+
+---
+
+## 💻 Implementation Details
+
+### Low-Level Rendering Pipeline
+- **MiniLibX (`mlx`):** Because MiniLibX does not provide hardware acceleration, automated blitting, or sprite sheets, rendering is achieved by constructing a fast 1D bytearray buffer (`BGRA` format) using `mlx_get_data_addr()`.
+- **Software Rasterization:** Corridors, background fills, and UI rectangles are written directly into contiguous memory slices (`draw_rect_fast`), and pushed to the window in a single `mlx_put_image_to_window()` call per frame to avoid flickering.
+- **Sprite Animation:**
+  - Pac-Man features a custom 3-state animated lifecycle: renders as a closed yellow sphere (`pacman_ball.xpm`) when stationary, and cycles rapidly between open and semi-closed mouth sprites (`pacman_*.xpm` and `close_*.xpm`) while in motion.
+  - Ghost directional eye sprites and visual cues for frightened (blue) and eaten states.
+- **60 FPS Throttling:** `GameController.update_game` tracks delta time (`dt`) via `time.perf_counter()` to enforce an exact 60 FPS update rate independent of display refresh rates.
+
+### Ghost AI State Machine
+1. **Scatter:** Ghosts target their respective home corner corridors.
+2. **Chase:** Ghosts dynamically target Pac-Man's current grid position.
+3. **Frightened:** Triggered by Super Pac-Gums; ghosts slow down, turn blue, and choose pseudo-random escape paths.
+4. **Eaten:** Eaten ghosts transform into floating eyes and execute a **Breadth-First Search (BFS)** pathfinding algorithm through `MazeAdapter.breath_first_search()` to calculate the exact shortest route back to their corner respawn point.
+
+---
+
+## 🏛️ General Software Architecture
+
+The project strictly follows the **Model-View-Controller (MVC)** architectural design pattern, ensuring that data logic, presentation, and user input are completely decoupled.
+
+```mermaid
+flowchart TD
+    subgraph Controller ["Controller (pac_man.controller)"]
+        GC[GameController]
+    end
+
+    subgraph Model ["Model (pac_man.model)"]
+        GM[GameModel]
+        MA[MazeAdapter]
+        HM[HighscoreManager]
+        PL[Player]
+        GH[Ghosts]
+    end
+
+    subgraph View ["View (pac_man.view)"]
+        GV[GameView]
+        MR[Renderer - Main & Minimap]
+        SM[SpriteManager]
+    end
+
+    GC -->|"Processes X11 Hooks & Inputs"| GM
+    GC -->|"Triggers 60 FPS Frame Render"| GV
+    GM -->|"Adapts Grid & Pellets"| MA
+    GM -->|"Persists Top 10"| HM
+    GM -->|"Updates Physics & States"| PL
+    GM -->|"Updates AI & Collisions"| GH
+    GV -->|"Reads Game State Snapshot"| GM
+    GV -->|"Draws Software Buffers"| MR
+    GV -->|"Blits XPM Assets"| SM
+```
+
+### Module Responsibilities
+- **`pac_man.model`**: Manages entity coordinates, velocity vectors, grid navigation, collision detection, game timers, and scorekeeping. Completely independent of graphical libraries.
+- **`pac_man.view`**: Manages the MiniLibX window pointer, preloaded XPM image pointers (`SpriteManager`), HUD text strings, minimap scaling, and pixel buffer rendering (`Renderer`).
+- **`pac_man.controller`**: Hooks X11 window destroy events and keyboard presses, throttles the frame tick, routes input actions, and transitions game states (`START_MENU`, `PLAYING`, `PAUSE`, `GAME_OVER`, `ENTER_NAME`, `HIGHSCORES`, `INSTRUCTIONS`, `CHEAT_MODE`).
+
+---
+
+## 🎮 Game Controls & Cheat Mode
+
+### Standard Gameplay Controls
+
+| Action | Primary Key | Secondary Key |
+|---|---|---|
+| **Move Up** | `W` | `↑` (Up Arrow) |
+| **Move Down** | `S` | `↓` (Down Arrow) |
+| **Move Left** | `A` | `←` (Left Arrow) |
+| **Move Right** | `D` | `→` (Right Arrow) |
+| **Navigate Menus** | `↑` / `↓` | `W` / `S` |
+| **Confirm / Select** | `ENTER` | `SPACE` |
+| **Pause / Resume** | `ESC` | `P` |
+| **Quit Game** | `ESC` (in menu) | `Q` |
+
+### 🛠️ Cheat Mode (Peer Review Tools)
+
+Press **`6`** during gameplay to toggle **Cheat Mode**. While active, the HUD displays available evaluation shortcuts:
+
+| Key | Cheat Function | Description |
+|:---:|---|---|
+| **`1`** | **Toggle Invincibility** | Pac-Man becomes impervious to ghost collisions (no lives lost) |
+| **`2`** | **Skip Level** | Instantly clears all dots and advances to the next level |
+| **`3`** | **Freeze Ghosts** | Halts all ghost movement and intentions immediately |
+| **`4`** | **Increase Speed** | Accelerates Pac-Man's movement speed (+10 px/s up to 300 px/s) |
+| **`5`** | **Add Extra Life** | Grants +1 life to Pac-Man (up to a maximum of 7 lives) |
+| **`6`** | **Exit Cheat Mode** | Resumes normal gameplay |
+
+---
+
+## 📊 Project Management
+
+The development followed an agile, test-driven methodology. Detailed task distributions, timelines, risk analyses, and test acceptance criteria are documented in the project management directory:
+
+👉 **[Read the Full Project Management Documentation](docs/project_management.md)**
+
+---
+
+## 📚 Resources & AI Usage
+
+### References
+- **Toru Iwatani & Namco:** Original *Pac-Man* (1980) game design principles.
+- **The Pac-Man Dossier by Jamey Pittman:** Indispensable reverse-engineering breakdown of ghost AI personalities, tile targeting, and scatter/chase timing cycles.
+- **42 MiniLibX (MLX):** Low-level X-Window graphical interface documentation.
+- **Python PEP Standards:** PEP 8 (Style Guide), PEP 257 (Docstrings), and PEP 484 (Static Type Annotations).
+- **Pydantic v2:** Robust data validation, field clamping, and model serialization.
+
+### Declaration of AI Usage
+In accordance with Chapter II and Chapter IX of the subject, AI tools were utilized during the development process as follows:
+- **Assisted Tasks:**
+  - Assisting with comprehensive `mypy --strict` typing compatibility across complex generic containers and Pydantic validator lifecycles.
+  - Designing optimal edge-case handling for the Breadth-First Search (BFS) shortest path implementation.
+  - Formulating mathematical row-symmetry coordinates to generate the standalone `pacman_ball.xpm` sprite.
+  - Reviewing docstring formatting against PEP 257 standards.
+- **Human Verification & Responsibility:**
+  - All AI-assisted suggestions were systematically checked, reviewed, and tested by team members.
+  - Every architectural choice (MVC separation, buffer rendering, event routing) was designed, justified, and validated collaboratively by the team.

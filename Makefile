@@ -1,4 +1,4 @@
-.PHONY: install run debug clean lint lint-strict
+.PHONY: install run debug clean lint lint-strict package
 
 install:
 	uv sync
@@ -21,3 +21,6 @@ lint:
 lint-strict:
 	uv run flake8 src/pac_man 
 	uv run mypy src/pac_man --strict
+
+package:
+	uv run python build_package.py

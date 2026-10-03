@@ -1,3 +1,5 @@
+"""Main entry point execution for the Pac-Man package."""
+
 import sys
 from pathlib import Path
 from .config_parser import ConfigParser
@@ -5,12 +7,12 @@ from .controller import GameController
 
 
 def main() -> None:
-    """Entry point for the Pac-Man game."""
+    """Validate command line arguments, load configuration, and start game."""
     argv = sys.argv
     if len(argv) != 2:
         print(
-            "Usage: 'make run' "
-            "or 'uv run python -m src.pac_man config.json'"
+            "Usage: python3 pac-man.py <config.json>\n"
+            "   or: make run"
         )
         return
 

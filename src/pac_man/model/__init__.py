@@ -1,3 +1,5 @@
+"""Model subpackage containing simulation state, entities, and maze logic."""
+
 from .maze_adapter import MazeAdapter, Cell
 from .game_model import GameModel, GameState
 from .highscores import HighscoreManager

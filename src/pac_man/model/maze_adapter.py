@@ -11,6 +11,8 @@ from collections import deque
 
 
 class Direction(IntFlag):
+    """Bitmask flags representing wall configurations for a cell."""
+
     NONE = 0
     NORTH = auto()  # 1
     EAST = auto()  # 2
@@ -22,14 +24,13 @@ class Direction(IntFlag):
 
 @dataclass(slots=True)
 class Cell:
-    """
-    Represents a single cell in the Pac-Man maze grid.
-    Initializes a cell at grid coordinates (x, y).
+    """Represents a single cell in the Pac-Man maze grid.
 
     Args:
-        x (int): Horizontal coordinate in the grid.
-        y (int): Vertical coordinate in the grid.
-        wall_code (int): 4-bit wall mask from MazeGenerator.
+        coords (tuple[int, int]): Horizontal and vertical grid coordinates.
+        wall_code (Direction): 4-bit wall mask from MazeGenerator.
+        has_pacgum (bool): Whether a normal pellet is present.
+        has_super_pacgum (bool): Whether an energizer power pellet is present.
     """
 
     coords: tuple[int, int]
@@ -40,6 +41,14 @@ class Cell:
     has_super_pacgum: bool = False
 
     def _has_wall(self, direction: Direction) -> bool:
+        """Check whether the cell has a wall in the specified direction.
+
+        Args:
+            direction (Direction): Cardinal direction flag to test.
+
+        Returns:
+            bool: True if wall bit is set, False otherwise.
+        """
         return bool(self.wall_code & direction)
 
     @property
@@ -68,6 +77,12 @@ class Cell:
         return (self.wall_code & Direction.ALL_WALLS) == Direction.ALL_WALLS
 
     def remove_gum(self, is_super_gum: bool) -> None:
+        """Remove a standard pellet or super pellet from this cell.
+
+        Args:
+            is_super_gum (bool): True if removing a super pellet, False for
+                a standard pacgum.
+        """
         if is_super_gum:
             self.has_super_pacgum = False
         else:
@@ -107,6 +122,11 @@ class MazeAdapter:
         self.generate()
 
     def finish_pacgums(self) -> bool:
+        """Check whether all pellets in the maze have been eaten.
+
+        Returns:
+            bool: True if total_pacgums is 0, False otherwise.
+        """
         return self.total_pacgums == 0
 
     def generate(self) -> None:
@@ -164,9 +184,20 @@ class MazeAdapter:
     def breath_first_search(
         self,
         start: tuple[int, int] | None = None,
-        dest: tuple[int, int] | None = None
+        dest: tuple[int, int] | None = None,
     ) -> list[tuple[int, int]]:
+        """Find the shortest path between start and destination coordinates.
 
+        Uses Breadth-First Search across open maze corridors.
+
+        Args:
+            start (tuple[int, int] | None): Starting cell grid coordinates.
+            dest (tuple[int, int] | None): Destination cell grid coordinates.
+
+        Returns:
+            list[tuple[int, int]]: List of cell coordinates from start to dest,
+                or empty list if unreachable.
+        """
         if not (start and dest):
             return []
 

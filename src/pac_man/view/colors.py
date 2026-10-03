@@ -1,7 +1,11 @@
+"""Color constants used across UI rendering and maze graphics."""
+
 from enum import IntEnum
 
 
 class Colors(IntEnum):
+    """Hex RGB color codes for graphical surfaces and text."""
+
     BACKGROUND = 0x151E2E
     MENU_BG = 0x1F4E5B
     MAZE_WALLS = 0x43658B

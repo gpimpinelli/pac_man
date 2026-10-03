@@ -1,3 +1,5 @@
+"""Highscore persistence and leaderboard management for Pac-Man."""
+
 import json
 from typing import Any
 from pathlib import Path
@@ -5,24 +7,34 @@ from pydantic import BaseModel, model_validator
 
 
 class HighscoreManager(BaseModel):
-    """It manages the persistency and validation of the record's ranking
+    """Manages persistence, validation, and ranking of top player scores.
 
-    Initialization of the record's manager and existent scores loader
-    Args:
-        filepath (str | Path): Path to the scores JSON file.
+    Attributes:
+        filepath (Path): Path to the scores JSON file.
+        scores (list[dict[str, Any]]): List of validated score entries.
+        is_new_highscore (bool): Flag indicating if last game made top 10.
     """
 
     filepath: Path = Path("highscore.json")
     scores: list[dict[str, Any]] = []
-
     is_new_highscore: bool = False
 
     @model_validator(mode="after")
     def init_load(self) -> "HighscoreManager":
+        """Load persistent scores from disk after model initialization.
+
+        Returns:
+            HighscoreManager: Initialized highscore manager instance.
+        """
         self.load()
         return self
 
     def load(self) -> None:
+        """Load and parse existing highscores from the JSON file.
+
+        Clamps corrupted or invalid files gracefully without throwing
+        unhandled exceptions, resetting the leaderboard if unreadable.
+        """
         if not self.filepath.is_file():
             self.scores = []
             return
@@ -30,7 +42,10 @@ class HighscoreManager(BaseModel):
             with self.filepath.open("r", encoding="utf-8") as f:
                 raw_data = json.load(f)
         except (json.JSONDecodeError, OSError):
-            print("[WARNING] Record file not valid, standings reset")
+            print(
+                "[WARNING] Highscore file corrupted or invalid, "
+                "standings reset."
+            )
             self.scores = []
             return
 
@@ -41,7 +56,6 @@ class HighscoreManager(BaseModel):
             self.scores = []
             return
 
-        # list[dict] -> [{"name": clean_name, "score": raw_score}]
         loaded_scores: list[dict[str, Any]] = []
         for item in raw_data:
             if not isinstance(item, dict):
@@ -54,11 +68,15 @@ class HighscoreManager(BaseModel):
             loaded_scores.append({"name": clean_name, "score": raw_score})
 
         loaded_scores.sort(key=lambda item: int(item["score"]), reverse=True)
-
         self.scores = loaded_scores[:10]
 
     @property
     def top_scores_text(self) -> list[str]:
+        """Format the top 10 scores into human-readable strings.
+
+        Returns:
+            list[str]: Formatted lines for display in the main menu.
+        """
         scores_list = self.scores
 
         if not scores_list:
@@ -73,8 +91,14 @@ class HighscoreManager(BaseModel):
         return formatted_scores
 
     def _sanitize_name(self, name: object) -> str:
-        """Name validation: max 10 char, only alfanumerics and spaces."""
+        """Sanitize player name to max 10 alphanumeric and space characters.
 
+        Args:
+            name (object): Raw player name input.
+
+        Returns:
+            str: Cleaned, truncated uppercase name, defaulting to 'PLAYER'.
+        """
         if not isinstance(name, str):
             return "PLAYER"
 
@@ -85,11 +109,10 @@ class HighscoreManager(BaseModel):
         clean_name = clean_name.strip()[:10]
         if len(clean_name) > 0:
             return clean_name
-        else:
-            return "PLAYER"
+        return "PLAYER"
 
     def save(self) -> None:
-        """Saves current highscores to the JSON file."""
+        """Save current highscores to the JSON file on disk."""
         try:
             with self.filepath.open("w", encoding="utf-8") as f:
                 json.dump(self.scores, f, indent=4)
@@ -97,11 +120,13 @@ class HighscoreManager(BaseModel):
             print(f"[ERROR] Could not save highscores to {self.filepath}: {e}")
 
     def is_highscore(self, score: int) -> bool:
-        """Checks if a score qualifies for the top 10 rankings.
+        """Check whether a score qualifies for the top 10 rankings.
+
         Args:
-            score (int): The score to evaluate.
+            score (int): Score value to evaluate.
+
         Returns:
-            bool: True if it qualifies for the top 10, False otherwise.
+            bool: True if the score enters the top 10, False otherwise.
         """
         if not isinstance(score, int) or isinstance(score, bool) or score < 0:
             return False
@@ -110,7 +135,15 @@ class HighscoreManager(BaseModel):
         return bool(score > int(self.scores[-1]["score"]))
 
     def add_score(self, name: str, score: int) -> bool:
+        """Add a new score to the leaderboard if eligible and save to disk.
 
+        Args:
+            name (str): Player name.
+            score (int): Final score achieved.
+
+        Returns:
+            bool: True if score was added to top 10, False otherwise.
+        """
         def _score(x: dict[str, Any]) -> int:
             s = x.get("score")
             return s if isinstance(s, int) else 0

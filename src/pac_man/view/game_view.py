@@ -1,3 +1,5 @@
+"""Game view module managing windows, backbuffers, and rendering."""
+
 from dataclasses import dataclass
 from typing import Any
 import mlx
@@ -10,6 +12,16 @@ from .renderer import Renderer
 
 @dataclass
 class MenuButton:
+    """Represents a clickable or selectable graphical menu button.
+
+    Attributes:
+        name (str): Label displayed inside the button.
+        x (int): Horizontal pixel position of the button top-left.
+        y (int): Vertical pixel position of the button top-left.
+        w (int): Width of the button rectangle in pixels.
+        h (int): Height of the button rectangle in pixels.
+    """
+
     name: str
     x: int
     y: int
@@ -18,7 +30,26 @@ class MenuButton:
 
 
 class GameView:
-    """Handle window creation, rendering, and MLX graphical outputs."""
+    """Handles window creation, software backbuffering, and MiniLibX rendering.
+
+    Attributes:
+        config (Any): Window and framerate configurations.
+        layout (ViewLayout): Responsive UI layout and dimensions.
+        m (mlx.Mlx): MiniLibX graphics interface wrapper.
+        mlx_ptr (Any): MiniLibX application handle.
+        sprites (SpriteManager): Preloaded sprite asset manager.
+        win_ptr (Any): MiniLibX window handle.
+        img (Any): Software frame backbuffer image.
+        data (Any): Raw byte buffer pointer for direct pixel manipulation.
+        bfp (int): Bits per pixel returned by MiniLibX.
+        size_line (int): Line stride in bytes.
+        bytes_per_pixel (int): Bytes per pixel (e.g. 4 for 32-bit ARGB).
+        buffer_size (int): Total buffer size in bytes.
+        main_renderer (Renderer): Renderer for the primary gameplay viewport.
+        minimap_renderer (Renderer): Renderer for the corner minimap viewport.
+        active_buttons (list[MenuButton]): Current frame menu buttons.
+        anim_tick (int): Monotonic frame tick used for animations.
+    """
 
     cheat_mode_command: tuple[str, ...] = (
         "",
@@ -49,6 +80,12 @@ You start with 3 lives. Colliding with a normal
 ghost costs 1 life and respawns you in the center."""
 
     def __init__(self, config: Any, layout: ViewLayout | None = None) -> None:
+        """Initialize the MiniLibX window, offscreen image, and renderers.
+
+        Args:
+            config (Any): Game configuration object.
+            layout (ViewLayout | None): Precalculated layout geometry metrics.
+        """
         self.config = config
         self.layout = (
             layout or ViewLayout.from_window_size(config.width, config.height)
@@ -57,7 +94,7 @@ ghost costs 1 life and respawns you in the center."""
         self.m = mlx.Mlx()
         self.mlx_ptr = self.m.mlx_init()
 
-        # Inizializza tutti gli sprite delegandoli alla classe esterna
+        # Delegate sprite loading to SpriteManager
         self.sprites = SpriteManager(self.m, self.mlx_ptr)
 
         self.win_ptr = self.m.mlx_new_window(
@@ -103,6 +140,11 @@ ghost costs 1 life and respawns you in the center."""
         self._startup_frames: int = 5
 
     def _background_menu(self, color: int = Colors.MENU_BG) -> None:
+        """Draw the background bounding box for menu overlays.
+
+        Args:
+            color (int): RGB color value for the menu box.
+        """
         menu = self.layout.menu
         new_w = self.config.width - (menu.padding_x * 2)
         new_h = self.config.height - (menu.padding_y * 2)
@@ -114,6 +156,11 @@ ghost costs 1 life and respawns you in the center."""
         )
 
     def draw_button(self, current_state: GameState) -> None:
+        """Render text labels on active menu buttons.
+
+        Args:
+            current_state (GameState): Current game state context.
+        """
         char_w = self.layout.menu.char_width_approx
         for btn in self.active_buttons:
             text_width = len(btn.name) * char_w
@@ -129,6 +176,11 @@ ghost costs 1 life and respawns you in the center."""
             )
 
     def draw_menu(self, button_lst: tuple[str, ...]) -> None:
+        """Render a single-button overlay window (e.g. back button).
+
+        Args:
+            button_lst (tuple[str, ...]): Tuple containing the button label.
+        """
         self.active_buttons.clear()
         self._background_menu(Colors.MENU_BG)
 
@@ -156,6 +208,13 @@ ghost costs 1 life and respawns you in the center."""
         )
 
     def draw_text(self, text: list[str], is_highscores: bool = False) -> None:
+        """Render multiple lines of text centered inside the menu box.
+
+        Args:
+            text (list[str]): Lines of text to render.
+            is_highscores (bool): True if rendering highscores with custom
+                line spacing.
+        """
         menu = self.layout.menu
         menu_w = self.config.width - (menu.padding_x * 2)
         menu_h = self.config.height - (menu.padding_y * 2)
@@ -187,6 +246,13 @@ ghost costs 1 life and respawns you in the center."""
         button_lst: tuple[str, ...],
         is_enter_name: bool = False,
     ) -> None:
+        """Render vertically stacked menu buttons with hover highlights.
+
+        Args:
+            selected_index (int): Currently highlighted button index.
+            button_lst (tuple[str, ...]): Button label strings.
+            is_enter_name (bool): True if rendering highscore name prompt.
+        """
         self.active_buttons.clear()
         self._background_menu(Colors.MENU_BG)
 
@@ -230,11 +296,20 @@ ghost costs 1 life and respawns you in the center."""
             )
 
     def clear(self) -> None:
+        """Clear backbuffer memory to solid background color."""
         self.data[0: self.buffer_size] = self._bg_buffer
 
     def draw_rect_fast(
         self, coords: tuple[int, int], w: int, h: int, color: int
     ) -> None:
+        """Quickly fill a clipped rectangular area directly into the buffer.
+
+        Args:
+            coords (tuple[int, int]): (x, y) top-left corner coordinates.
+            w (int): Rectangle width in pixels.
+            h (int): Rectangle height in pixels.
+            color (int): RGB fill color.
+        """
         b_ch = color & 0xFF
         g_ch = (color >> 8) & 0xFF
         r_ch = (color >> 16) & 0xFF
@@ -256,6 +331,13 @@ ghost costs 1 life and respawns you in the center."""
             self.data[start:start + row_len] = row_bytes
 
     def print_game_info(self, x: int, y: int, text: list[str]) -> None:
+        """Render informational HUD text lines using mlx_string_put.
+
+        Args:
+            x (int): Horizontal origin in pixels.
+            y (int): Vertical origin in pixels.
+            text (list[str]): Text lines to display.
+        """
         line_height = self.layout.hud.line_height
         for i, line in enumerate(text):
             text_y = int(y) + (line_height * i)
@@ -269,6 +351,11 @@ ghost costs 1 life and respawns you in the center."""
             )
 
     def draw_main_sprites(self, model: GameModel) -> None:
+        """Render Pac-Man and ghost sprites in the primary game viewport.
+
+        Args:
+            model (GameModel): Current game model state.
+        """
         if model.state not in (
             GameState.PLAYING,
             GameState.DEATH_PAUSE,
@@ -320,6 +407,11 @@ ghost costs 1 life and respawns you in the center."""
                 )
 
     def draw_minimap_sprites(self, model: GameModel) -> None:
+        """Render miniature entity icons onto the corner minimap.
+
+        Args:
+            model (GameModel): Current game model state.
+        """
         if model.state not in (
             GameState.PLAYING,
             GameState.DEATH_PAUSE,
@@ -357,6 +449,11 @@ ghost costs 1 life and respawns you in the center."""
             )
 
     def draw_finish_sprite(self, sprites: int) -> None:
+        """Render centered game over or victory banner sprite.
+
+        Args:
+            sprites (int): MiniLibX image buffer handle of the banner.
+        """
         sw = self.layout.finish_sprite_w
         sh = self.layout.finish_sprite_h
         x = (self.config.width - sw) // 2
@@ -366,6 +463,12 @@ ghost costs 1 life and respawns you in the center."""
         )
 
     def draw_hud(self, model: GameModel, actual_bottom_y: int) -> None:
+        """Render HUD metrics, cheat indicators, and life heart icons.
+
+        Args:
+            model (GameModel): Current game model state.
+            actual_bottom_y (int): Vertical coordinate baseline from minimap.
+        """
         if model.state in (
             GameState.START_MENU,
             GameState.HIGHSCORES,
@@ -410,6 +513,11 @@ ghost costs 1 life and respawns you in the center."""
             )
 
     def render(self, model: GameModel) -> None:
+        """Compose and draw full game frame to MiniLibX window.
+
+        Args:
+            model (GameModel): Complete simulation state to render.
+        """
         self.anim_tick += 1
         if getattr(self, "_startup_frames", 0) > 0:
             self._last_frame_key = None

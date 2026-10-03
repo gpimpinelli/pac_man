@@ -1,10 +1,9 @@
+"""Core game model managing game state, physics, and game rules."""
+
 import math
 import random
 from typing import Any
 from enum import Enum, auto
-from .maze_adapter import Cell, MazeAdapter
-from .highscores import HighscoreManager
-from pac_man.utils import pixel_to_cell, cell_to_pixel
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -12,10 +11,15 @@ from pydantic import (
     Field,
     PrivateAttr,
 )
+from pac_man.utils import pixel_to_cell, cell_to_pixel
+from .maze_adapter import Cell, MazeAdapter
+from .highscores import HighscoreManager
 from .entity import Ghost, GhostState, Player, PlayerState, Direction, Entity
 
 
 class GameState(Enum):
+    """Enumeration of overall game application states."""
+
     START_MENU = auto()
     PLAYING = auto()
     DEATH_PAUSE = auto()
@@ -28,13 +32,24 @@ class GameState(Enum):
     PAUSE = auto()
 
 
-# ==========================================
-# 1. MODEL (Physics, Data, and Rules)
-# ==========================================
 class GameModel(BaseModel):
-    """
-    Manage the game logic, state, and entity physics.
-    Inherits from Pydantic's BaseModel for rigid data initialization.
+    """Manages game state, maze layout, entities, and physics simulations.
+
+    Attributes:
+        size (int): Grid scale reference size.
+        screen_width (int): Viewport width in pixels.
+        screen_height (int): Viewport height in pixels.
+        maze (Any): MazeAdapter instance managing the grid.
+        state (GameState): Current game lifecycle state.
+        tile_size (int): Dimension of each grid tile in pixels.
+        config_data (dict[str, Any]): Parsed JSON configuration parameters.
+        ghosts (list[Ghost]): List of active ghost entities.
+        selected_button_index (int): Index of currently highlighted menu item.
+        highscore_manager (HighscoreManager): Score persistence manager.
+        name_input (str): Current text buffer for highscore entry.
+        level_time_remaining (float): Countdown timer for current level.
+        level_transition_timer (float): Delay timer between levels.
+        current_level_index (int): 0-indexed current game level.
     """
 
     size: int = 16
@@ -55,11 +70,21 @@ class GameModel(BaseModel):
 
     @property
     def player(self) -> Player:
+        """Get the active player instance.
+
+        Returns:
+            Player: The player entity.
+        """
         assert self._player is not None
         return self._player
 
     @player.setter
     def player(self, value: Player) -> None:
+        """Set the active player instance.
+
+        Args:
+            value (Player): The player entity to set.
+        """
         self._player = value
 
     ghosts: list[Ghost] = Field(default_factory=list)
@@ -83,6 +108,11 @@ class GameModel(BaseModel):
 
     @model_validator(mode="after")
     def create_entity(self) -> "GameModel":
+        """Initialize game maze, highscores, and entities after model setup.
+
+        Returns:
+            GameModel: The initialized game model instance.
+        """
         self.highscore_manager = HighscoreManager(
             filepath=self.config_data.get(
                 "highscore_filename", "highscores.json"
@@ -137,6 +167,12 @@ class GameModel(BaseModel):
     def _spawn_entities(
         self, entity: Entity, coords: tuple[int, int]
     ) -> None:
+        """Position an entity at the center of the specified grid cell.
+
+        Args:
+            entity (Entity): The entity to reposition.
+            coords (tuple[int, int]): Target grid coordinates (col, row).
+        """
         half_tile = self.tile_size // 2
         if isinstance(entity, Player):
             coords_pixel = cell_to_pixel(
@@ -153,11 +189,24 @@ class GameModel(BaseModel):
         entity.coords_spawn = (entity.x, entity.y)
 
     def _change_ghosts_state(self, new_state: GhostState) -> None:
+        """Update behavioral state of all non-eaten ghosts.
+
+        Args:
+            new_state (GhostState): Target state to apply.
+        """
         for ghost in self.ghosts:
             if ghost.state != GhostState.EATEN and ghost.state != new_state:
                 ghost.state = new_state
 
     def _calc_rail(self, entity: Entity) -> tuple[float, float]:
+        """Calculate the center line (rail) coordinates of current tile.
+
+        Args:
+            entity (Entity): The entity whose position is sampled.
+
+        Returns:
+            tuple[float, float]: Center (x, y) coordinates of the tile.
+        """
         col, row = pixel_to_cell((entity.x, entity.y), (0, 0), self.tile_size)
         return (
             float((col + 0.5) * self.tile_size),
@@ -166,6 +215,11 @@ class GameModel(BaseModel):
 
     @property
     def menu_options(self) -> tuple[str, ...]:
+        """Get the available interactive menu options for current state.
+
+        Returns:
+            tuple[str, ...]: Tuple of action labels for active menu screen.
+        """
         if self.state == GameState.START_MENU:
             return ("START", "HIGHSCORES", "INSTRUCTIONS", "EXIT")
         elif self.state == GameState.GAME_OVER:
@@ -182,10 +236,16 @@ class GameModel(BaseModel):
         return ()
 
     def remove_super(self) -> None:
+        """Cancel Pac-Man super energized mode and revert ghosts to chase."""
         self.player.remove_super()
         self._change_ghosts_state(GhostState.CHASE)
 
     def _load_level(self, is_first: bool = False) -> None:
+        """Load and initialize a maze level from configuration.
+
+        Args:
+            is_first (bool): True if starting level 0 with fixed seed.
+        """
         if is_first:
             self.current_level_index = 0
 
@@ -193,7 +253,7 @@ class GameModel(BaseModel):
             "levels", [{"width": 15, "height": 15}]
         )
 
-        # Evita errori se il giocatore supera l'ultimo livello disponibile
+        # Clamp level index to the last configured level
         if self.current_level_index >= len(levels_list):
             self.current_level_index = len(levels_list) - 1
 
@@ -219,6 +279,7 @@ class GameModel(BaseModel):
         )
 
     def _reset_game(self) -> None:
+        """Reset player and ghost positions to spawn points and pause play."""
         self._freeze_game()
         self.remove_super()
 
@@ -230,15 +291,21 @@ class GameModel(BaseModel):
         self.state = GameState.DEATH_PAUSE
 
     def _freeze_game(self) -> None:
+        """Halt all entity movements immediately."""
         self.player.reset_movement()
         self._freeze_ghosts()
 
     def _freeze_ghosts(self) -> None:
+        """Halt all ghost movements immediately."""
         for ghost in self.ghosts:
             ghost.reset_movement()
 
     def _check_entity_collisions(self) -> list[int]:
-        """Check if entitis collides"""
+        """Check for collisions between player and ghosts within hitbox radius.
+
+        Returns:
+            list[int]: Indices of colliding ghosts in self.ghosts.
+        """
         hitbox_radius = self.tile_size * 0.4
 
         i = 0
@@ -254,7 +321,7 @@ class GameModel(BaseModel):
         return collisions_detected
 
     def _check_and_eat_gum(self) -> None:
-        """Check the current cell and eat the pac gum"""
+        """Detect and consume pellets at Pac-Man's current grid position."""
         col, row = pixel_to_cell(
             (self.player.x, self.player.y), (0, 0), self.tile_size
         )
@@ -287,6 +354,7 @@ class GameModel(BaseModel):
             self.maze.total_pacgums -= 1
 
     def level_skip(self) -> None:
+        """Cheat command to skip directly to the next level."""
         self.current_level_index += 1
         if self.current_level_index >= len(self.config_data["levels"]):
             self.state = GameState.ENTER_NAME
@@ -294,18 +362,22 @@ class GameModel(BaseModel):
             self._load_level(is_first=False)
 
     def add_lives(self) -> None:
+        """Cheat command to grant an extra life to the player."""
         self.player.add_lives()
 
     def increase_speed(self) -> None:
+        """Cheat command to increase player movement speed."""
         print(f"[CHEAT] Player speed: {self.player.speed}")
         self.player.increase_player_speed()
         print(f"[CHEAT] Increased Player speed: {self.player.speed}")
 
     def toggle_invincible(self) -> None:
+        """Cheat command to toggle player invulnerability mode."""
         self.player.toggle_invincible()
         print(f"[CHEAT] Invincibility: {self.player.is_invincible}")
 
     def _handle_player_death(self) -> None:
+        """Process player life loss, game over transition, or level reset."""
         self.player.lives -= 1
         self.player.state = PlayerState.DEAD
 
@@ -315,17 +387,17 @@ class GameModel(BaseModel):
             self.state = GameState.ENTER_NAME
         else:
             self._reset_game()
-            # Riporta il tempo al massimo quando rinasci al centro
+            # Reset level timer to maximum upon respawn
             base_time = self.config_data.get("level_max_time", 180)
             self.level_time_remaining = (
                 base_time * (1.05**self.current_level_index)
             )
 
     def update(self, dt: float) -> None:
-        """
-        Update the player position and handle collisions.
+        """Advance game physics, handle input, AI steering, and collisions.
+
         Args:
-            dt: Delta time elapsed since the last frame, in seconds.
+            dt (float): Elapsed delta time in seconds since last frame.
         """
         if self.state not in (
             GameState.PLAYING,
@@ -407,7 +479,7 @@ class GameModel(BaseModel):
                 GhostState.SCATTER,
                 GhostState.CHASE,
             ):
-                # Pac-Man mangia il fantasma
+                # Pac-Man eats frightened ghost
                 self.player.multiplicator = 1.5
                 self.player.score += int(
                     self.config_data["points_per_ghost"]
@@ -419,7 +491,7 @@ class GameModel(BaseModel):
                 continue
 
             else:
-                # Il fantasma mangia Pac-Man
+                # Ghost catches Pac-Man
                 self._handle_player_death()
                 break
 
@@ -441,6 +513,12 @@ class GameModel(BaseModel):
             self.player.multiplicator = 1.0
 
     def _handle_steering(self, entity: Entity, dt: float) -> None:
+        """Guide entity turning into perpendicular corridors when aligned.
+
+        Args:
+            entity (Entity): The entity to steer.
+            dt (float): Elapsed delta time in seconds.
+        """
         if entity.desired_dir and entity.desired_dir != entity.current_dir:
             is_opposite = (
                 (
@@ -501,6 +579,12 @@ class GameModel(BaseModel):
                         entity.desired_dir = None
 
     def _apply_movement(self, entity: Entity, dt: float) -> None:
+        """Translate entity coordinates according to its current direction.
+
+        Args:
+            entity (Entity): Entity to translate.
+            dt (float): Elapsed delta time in seconds.
+        """
         match entity.current_dir:
             case Direction.UP:
                 entity.y -= entity.speed * dt
@@ -512,6 +596,11 @@ class GameModel(BaseModel):
                 entity.x += entity.speed * dt
 
     def _handle_wall_collisions(self, entity: Entity) -> None:
+        """Halt entity movement and snap to rail when meeting a solid wall.
+
+        Args:
+            entity (Entity): Entity to collide against maze walls.
+        """
         if entity.current_dir is not None:
             col, row = pixel_to_cell(
                 (entity.x, entity.y), (0, 0), self.tile_size

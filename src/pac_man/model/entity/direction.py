@@ -1,3 +1,5 @@
+"""Direction enumeration and keyboard mapping for Pac-Man."""
+
 from enum import Enum, auto
 
 
@@ -10,7 +12,7 @@ class Direction(Enum):
     RIGHT = auto()
 
 
-KEYS_MAP = {
+KEYS_MAP: dict[int, Direction] = {
     65362: Direction.UP,
     119: Direction.UP,
     65364: Direction.DOWN,

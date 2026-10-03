@@ -1,3 +1,5 @@
+"""Controller module coordinating user input, game loop, and view rendering."""
+
 import os
 import time
 from typing import Any
@@ -9,6 +11,15 @@ from ..model import GameModel, Direction, GameState, PlayerState, Player
 
 
 class GameConfig(BaseModel):
+    """Configuration settings for window dimensions and framerate.
+
+    Attributes:
+        width (int): Window width in pixels.
+        height (int): Window height in pixels.
+        title (str): Window title caption.
+        target_fps (int): Maximum frames rendered per second.
+    """
+
     width: int = Field(default=1024, gt=0)
     height: int = Field(default=764, gt=0)
     title: str = Field(default="Pac-Man 42", min_length=1)
@@ -16,7 +27,19 @@ class GameConfig(BaseModel):
 
 
 class GameController:
+    """Manages the main game loop, OS events, and links model with view.
+
+    Attributes:
+        config (GameConfig): Window and display configurations.
+        layout (ViewLayout): Dynamic UI layout calculations.
+        last_time (float): Timestamp of last frame execution.
+        view (GameView): Graphical view and sprite manager.
+        model (GameModel): Core simulation and state container.
+    """
+
     class Key(IntEnum):
+        """Standard MiniLibX and X11 keyboard keycodes."""
+
         ESC = 65307
         ENTER = 65293
         BACKSPACE = 65288
@@ -39,11 +62,15 @@ class GameController:
         D = 100
 
     class EventType(IntEnum):
+        """X11 hook event types supported by MiniLibX."""
+
         KEY_PRESS = 2
         DESTROY = 17
         CLIENT_MESSAGE = 33
 
     class EventMask(IntEnum):
+        """X11 event mask bits."""
+
         KEY_PRESS = 1 << 0
         STRUCTURE_NOTIFY = 1 << 17
 
@@ -58,7 +85,12 @@ class GameController:
         Key.D: Direction.RIGHT,
     }
 
-    def __init__(self, config_data: dict[str, Any] | None = None):
+    def __init__(self, config_data: dict[str, Any] | None = None) -> None:
+        """Initialize game controller, view, model, and event bindings.
+
+        Args:
+            config_data (dict[str, Any] | None): Validated configuration data.
+        """
         self.config = GameConfig(width=1680, height=900, target_fps=60)
 
         self.layout = ViewLayout.from_window_size(
@@ -82,9 +114,15 @@ class GameController:
 
     @property
     def player(self) -> Player:
+        """Get the active player instance from the model.
+
+        Returns:
+            Player: The player entity.
+        """
         return self.model.player
 
     def setup_hooks(self) -> None:
+        """Register keyboard input, window close, and frame update hooks."""
         m = self.view.m
         win = self.view.win_ptr
 
@@ -116,11 +154,17 @@ class GameController:
         m.mlx_loop_hook(self.view.mlx_ptr, self.update_game, None)
 
     def close_game(self, *args: Any) -> None:
+        """Terminate the game window and exit application cleanly.
+
+        Args:
+            *args (Any): MiniLibX event parameters.
+        """
         print("Closing game...")
         self.view.m.mlx_destroy_window(self.view.mlx_ptr, self.view.win_ptr)
         os._exit(0)
 
     def _handle_menu_selection(self) -> None:
+        """Execute action corresponding to currently selected menu option."""
         options = self.model.menu_options
         if not options:
             return
@@ -168,6 +212,11 @@ class GameController:
             self.model.selected_button_index = 0
 
     def _pause_game(self, action: Direction | None) -> None:
+        """Unpause game on player input when waiting in death/ready state.
+
+        Args:
+            action (Direction | None): Player movement direction inputted.
+        """
         if action:
             self.player.desired_dir = action
             self.player.state = PlayerState.ALIVE
@@ -175,6 +224,12 @@ class GameController:
             self.last_time = time.perf_counter()
 
     def on_key_press(self, keycode: int, *args: Any) -> None:
+        """Handle keyboard key press events from MiniLibX window hook.
+
+        Args:
+            keycode (int): Pressed keycode value.
+            *args (Any): Additional MiniLibX hook arguments.
+        """
         action = self.KEYS_MAP.get(keycode)
 
         if self.model.state == GameState.PLAYING:
@@ -262,6 +317,11 @@ class GameController:
         return
 
     def update_game(self, *args: Any) -> None:
+        """MiniLibX loop hook updating physics at target framerate.
+
+        Args:
+            *args (Any): MiniLibX loop callback arguments.
+        """
         current_time = time.perf_counter()
         dt = current_time - self.last_time
         frame_duration = 1.0 / self.config.target_fps
@@ -274,9 +334,10 @@ class GameController:
         self.view.render(self.model)
 
     def run(self) -> None:
+        """Start the MiniLibX graphical event loop."""
         print(
             f"{self.config.title} Engine Running. "
-            "Premi frecce o WASD per muoverti. ESC per uscire."
+            "Press arrows or WASD to move. ESC to pause."
         )
         self.view.m.mlx_loop(self.view.mlx_ptr)
 
