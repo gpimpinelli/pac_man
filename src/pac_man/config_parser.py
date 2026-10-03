@@ -1,4 +1,5 @@
 import json
+from typing import Any
 from pathlib import Path
 from pydantic import BaseModel, Field, model_validator
 
@@ -25,7 +26,7 @@ class ConfigParser(BaseModel):
     """
 
     path: Path
-    data: dict = Field(default_factory=dict)
+    data: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def post_init(self) -> "ConfigParser":

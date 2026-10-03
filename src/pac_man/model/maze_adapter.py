@@ -165,7 +165,7 @@ class MazeAdapter:
         self,
         start: tuple[int, int] | None = None,
         dest: tuple[int, int] | None = None
-    ) -> list[tuple[int, int] | None]:
+    ) -> list[tuple[int, int]]:
 
         if not (start and dest):
             return []
@@ -177,36 +177,42 @@ class MazeAdapter:
             return []
 
         came_from: dict[tuple[int, int], tuple[int, int] | None] = {}
-        queue = deque(start_cell.coords)
+        queue: deque[Cell] = deque([start_cell])
         came_from[start_cell.coords] = None
 
         while queue:
-            current_coords = queue.popleft()
-            if current_coords == dest_cell.coords:
+            current = queue.popleft()
+            if current.coords == dest_cell.coords:
                 break
-
-            current = self.get_cell(current_coords[0], current_coords[1])
 
             if not current.has_wall_north:
                 n_coords = (current.coords[0], current.coords[1] - 1)
                 if n_coords not in came_from:
-                    queue.append(self.get_cell(n_coords[0], n_coords[1]))
-                    came_from[n_coords] = current.coords
+                    neighbor = self.get_cell(n_coords[0], n_coords[1])
+                    if neighbor is not None:
+                        queue.append(neighbor)
+                        came_from[n_coords] = current.coords
             if not current.has_wall_south:
                 n_coords = (current.coords[0], current.coords[1] + 1)
                 if n_coords not in came_from:
-                    queue.append(self.get_cell(n_coords[0], n_coords[1]))
-                    came_from[n_coords] = current.coords
+                    neighbor = self.get_cell(n_coords[0], n_coords[1])
+                    if neighbor is not None:
+                        queue.append(neighbor)
+                        came_from[n_coords] = current.coords
             if not current.has_wall_east:
                 n_coords = (current.coords[0] + 1, current.coords[1])
                 if n_coords not in came_from:
-                    queue.append(self.get_cell(n_coords[0], n_coords[1]))
-                    came_from[n_coords] = current.coords
+                    neighbor = self.get_cell(n_coords[0], n_coords[1])
+                    if neighbor is not None:
+                        queue.append(neighbor)
+                        came_from[n_coords] = current.coords
             if not current.has_wall_west:
                 n_coords = (current.coords[0] - 1, current.coords[1])
                 if n_coords not in came_from:
-                    queue.appendleft(self.get_cell(n_coords[0], n_coords[1]))
-                    came_from[n_coords] = current.coords
+                    neighbor = self.get_cell(n_coords[0], n_coords[1])
+                    if neighbor is not None:
+                        queue.append(neighbor)
+                        came_from[n_coords] = current.coords
 
         if dest_cell.coords not in came_from:
             return []

@@ -87,6 +87,7 @@ ghost costs 1 life and respawns you in the center."""
             self, tile_size=self.layout.main_tile_size
         )
         self.active_buttons: list[MenuButton] = []
+        self.anim_tick: int = 0
 
         mini = self.layout.minimap
         self.minimap_renderer = Renderer(
@@ -277,10 +278,18 @@ ghost costs 1 life and respawns you in the center."""
             return
 
         offset = self.layout.sprite_offset
-        default_pacman = self.sprites.pacman[Direction.RIGHT]
-        current_pacman_sprite = self.sprites.pacman.get(
-            model.player.current_dir, default_pacman
-        )
+
+        if model.player.current_dir is None:
+            current_pacman_sprite = self.sprites.pacman_ball
+        else:
+            p_dir = model.player.current_dir
+            is_close = (self.anim_tick // 2) % 2 == 0
+            sprites_dict = (
+                self.sprites.pacman_semi if is_close else self.sprites.pacman
+            )
+            current_pacman_sprite = sprites_dict.get(
+                p_dir, self.sprites.pacman_ball
+            )
 
         px = int(model.player.x + self.main_renderer.offset_x) - offset
         py = int(model.player.y + self.main_renderer.offset_y) - offset
@@ -401,6 +410,7 @@ ghost costs 1 life and respawns you in the center."""
             )
 
     def render(self, model: GameModel) -> None:
+        self.anim_tick += 1
         if getattr(self, "_startup_frames", 0) > 0:
             self._last_frame_key = None
             self._startup_frames -= 1

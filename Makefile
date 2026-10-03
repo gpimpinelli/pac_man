@@ -16,7 +16,7 @@ clean:
 
 lint:
 	uv run flake8 src/pac_man 
-	uv run mypy src/pac_man/model --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
+	uv run mypy src/pac_man --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
 
 lint-strict:
 	uv run flake8 src/pac_man 

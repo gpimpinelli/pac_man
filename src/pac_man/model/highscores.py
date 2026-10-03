@@ -1,4 +1,5 @@
 import json
+from typing import Any
 from pathlib import Path
 from pydantic import BaseModel, model_validator
 
@@ -12,7 +13,7 @@ class HighscoreManager(BaseModel):
     """
 
     filepath: Path = Path("highscore.json")
-    scores: list[dict[str, object]] = []
+    scores: list[dict[str, Any]] = []
 
     is_new_highscore: bool = False
 
@@ -41,7 +42,7 @@ class HighscoreManager(BaseModel):
             return
 
         # list[dict] -> [{"name": clean_name, "score": raw_score}]
-        loaded_scores = []
+        loaded_scores: list[dict[str, Any]] = []
         for item in raw_data:
             if not isinstance(item, dict):
                 continue
@@ -110,7 +111,7 @@ class HighscoreManager(BaseModel):
 
     def add_score(self, name: str, score: int) -> bool:
 
-        def _score(x) -> int:
+        def _score(x: dict[str, Any]) -> int:
             s = x.get("score")
             return s if isinstance(s, int) else 0
 

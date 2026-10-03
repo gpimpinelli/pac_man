@@ -13,8 +13,8 @@ class Renderer:
         view: "GameView",
         view_x: int = 0,
         view_y: int = 0,
-        view_w: int = None,
-        view_h: int = None,
+        view_w: int | None = None,
+        view_h: int | None = None,
         tile_size: int = 40,
     ) -> None:
         self.view: "GameView" = view

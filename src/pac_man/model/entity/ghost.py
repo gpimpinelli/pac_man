@@ -38,7 +38,7 @@ class Ghost(Entity):
 
     def _evaluate_path(
         self,
-        game_state,
+        game_state: Any,
         possible_dirs: list[Direction],
         cell_col: int,
         cell_row: int,

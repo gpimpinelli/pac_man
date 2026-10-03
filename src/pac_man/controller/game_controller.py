@@ -5,7 +5,7 @@ from enum import IntEnum
 from pydantic import BaseModel, Field
 from ..view import GameView
 from ..view.layout import ViewLayout
-from ..model import GameModel, Direction, GameState, PlayerState
+from ..model import GameModel, Direction, GameState, PlayerState, Player
 
 
 class GameConfig(BaseModel):
@@ -47,7 +47,7 @@ class GameController:
         KEY_PRESS = 1 << 0
         STRUCTURE_NOTIFY = 1 << 17
 
-    KEYS_MAP = {
+    KEYS_MAP: dict[int, Direction] = {
         Key.UP: Direction.UP,
         Key.W: Direction.UP,
         Key.DOWN: Direction.DOWN,
@@ -58,7 +58,7 @@ class GameController:
         Key.D: Direction.RIGHT,
     }
 
-    def __init__(self, config_data: dict[str, Any] = None):
+    def __init__(self, config_data: dict[str, Any] | None = None):
         self.config = GameConfig(width=1680, height=900, target_fps=60)
 
         self.layout = ViewLayout.from_window_size(
@@ -74,11 +74,15 @@ class GameController:
             screen_width=self.config.width,
             screen_height=self.config.height,
             tile_size=self.layout.main_tile_size,
-            config_data=config_data,
+            config_data=config_data or {},
         )
 
         self.model.size = self.layout.sprite_offset
         self.setup_hooks()
+
+    @property
+    def player(self) -> Player:
+        return self.model.player
 
     def setup_hooks(self) -> None:
         m = self.view.m
@@ -124,9 +128,9 @@ class GameController:
         selected_text = options[self.model.selected_button_index]
         if selected_text in ("START", "RETRY"):
             self.model._load_level(is_first=True)
-            self.model.player.lives = self.model.config_data.get("lives", 3)
-            self.model.player.score = 0
-            self.model.player.state = PlayerState.ALIVE
+            self.player.lives = self.model.config_data.get("lives", 3)
+            self.player.score = 0
+            self.player.state = PlayerState.ALIVE
             self.model.state = GameState.DEATH_PAUSE
 
         elif selected_text == "SAVE SCORE":
@@ -134,7 +138,7 @@ class GameController:
             if self.model.name_input:
                 name = self.model.name_input.strip()
             self.model.highscore_manager.add_score(
-                name, self.model.player.score
+                name, self.player.score
             )
             self.model.name_input = ""
             self.model.state = GameState.GAME_OVER
@@ -163,10 +167,10 @@ class GameController:
             self.model.state = GameState.START_MENU
             self.model.selected_button_index = 0
 
-    def _pause_game(self, action: int) -> None:
+    def _pause_game(self, action: Direction | None) -> None:
         if action:
-            self.model.player.desired_dir = action
-            self.model.player.state = PlayerState.ALIVE
+            self.player.desired_dir = action
+            self.player.state = PlayerState.ALIVE
             self.model.state = GameState.PLAYING
             self.last_time = time.perf_counter()
 
@@ -175,7 +179,7 @@ class GameController:
 
         if self.model.state == GameState.PLAYING:
             if action:
-                self.model.player.desired_dir = action
+                self.player.desired_dir = action
             elif keycode == self.Key.SIX:
                 self.model.state = GameState.CHEAT_MODE
             elif (

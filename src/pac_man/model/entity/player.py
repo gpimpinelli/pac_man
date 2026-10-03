@@ -12,7 +12,7 @@ class PlayerState(Enum):
 class Player(Entity):
     lives: int = 3
     score: int = 0
-    multiplicator: int = 1
+    multiplicator: float = 1.0
     super_timer: float = 0.0
     state: PlayerState = PlayerState.ALIVE
     is_invincible: bool = False

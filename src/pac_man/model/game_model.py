@@ -5,7 +5,13 @@ from enum import Enum, auto
 from .maze_adapter import Cell, MazeAdapter
 from .highscores import HighscoreManager
 from pac_man.utils import pixel_to_cell, cell_to_pixel
-from pydantic import BaseModel, ConfigDict, model_validator, Field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    model_validator,
+    Field,
+    PrivateAttr,
+)
 from .entity import Ghost, GhostState, Player, PlayerState, Direction, Entity
 
 
@@ -45,7 +51,17 @@ class GameModel(BaseModel):
 
     config_data: dict[str, Any] = Field(default_factory=dict)
 
-    player: Player | None = None
+    _player: Player | None = PrivateAttr(default=None)
+
+    @property
+    def player(self) -> Player:
+        assert self._player is not None
+        return self._player
+
+    @player.setter
+    def player(self, value: Player) -> None:
+        self._player = value
+
     ghosts: list[Ghost] = Field(default_factory=list)
 
     selected_button_index: int = 0
@@ -66,7 +82,7 @@ class GameModel(BaseModel):
     model_config = ConfigDict(validate_assignment=False)
 
     @model_validator(mode="after")
-    def create_entity(self):
+    def create_entity(self) -> "GameModel":
         self.highscore_manager = HighscoreManager(
             filepath=self.config_data.get(
                 "highscore_filename", "highscores.json"
@@ -118,7 +134,9 @@ class GameModel(BaseModel):
             speed += 2
         return self
 
-    def _spawn_entities(self, entity: Entity, coords: tuple[int, int]):
+    def _spawn_entities(
+        self, entity: Entity, coords: tuple[int, int]
+    ) -> None:
         half_tile = self.tile_size // 2
         if isinstance(entity, Player):
             coords_pixel = cell_to_pixel(
@@ -127,7 +145,7 @@ class GameModel(BaseModel):
                 self.tile_size,
             )
         else:
-            coords_pixel: tuple[int, int] = cell_to_pixel(
+            coords_pixel = cell_to_pixel(
                 coords, (0, 0), self.tile_size
             )
         entity.x = float(coords_pixel[0] + half_tile)
@@ -212,9 +230,7 @@ class GameModel(BaseModel):
         self.state = GameState.DEATH_PAUSE
 
     def _freeze_game(self) -> None:
-        if self.player:
-            self.player.reset_movement()
-
+        self.player.reset_movement()
         self._freeze_ghosts()
 
     def _freeze_ghosts(self) -> None:
@@ -223,8 +239,6 @@ class GameModel(BaseModel):
 
     def _check_entity_collisions(self) -> list[int]:
         """Check if entitis collides"""
-        if not self.player:
-            return
         hitbox_radius = self.tile_size * 0.4
 
         i = 0
@@ -241,8 +255,6 @@ class GameModel(BaseModel):
 
     def _check_and_eat_gum(self) -> None:
         """Check the current cell and eat the pac gum"""
-        if not self.player:
-            return
         col, row = pixel_to_cell(
             (self.player.x, self.player.y), (0, 0), self.tile_size
         )
@@ -282,27 +294,18 @@ class GameModel(BaseModel):
             self._load_level(is_first=False)
 
     def add_lives(self) -> None:
-        if not self.player:
-            return
         self.player.add_lives()
 
     def increase_speed(self) -> None:
-        if not self.player:
-            return
         print(f"[CHEAT] Player speed: {self.player.speed}")
         self.player.increase_player_speed()
         print(f"[CHEAT] Increased Player speed: {self.player.speed}")
 
     def toggle_invincible(self) -> None:
-        if not self.player:
-            return
         self.player.toggle_invincible()
         print(f"[CHEAT] Invincibility: {self.player.is_invincible}")
 
     def _handle_player_death(self) -> None:
-        if not self.player:
-            return
-
         self.player.lives -= 1
         self.player.state = PlayerState.DEAD
 
@@ -324,9 +327,6 @@ class GameModel(BaseModel):
         Args:
             dt: Delta time elapsed since the last frame, in seconds.
         """
-        if not self.player:
-            return
-
         if self.state not in (
             GameState.PLAYING,
             GameState.CHEAT_MODE,
@@ -362,11 +362,10 @@ class GameModel(BaseModel):
                 if ghost.state == GhostState.SCATTER:
                     ghost.state = GhostState.CHASE
 
-        if self.player:
-            self.player.update_intention(self)
-            self._handle_steering(self.player, dt)
-            self._apply_movement(self.player, dt)
-            self._handle_wall_collisions(self.player)
+        self.player.update_intention(self)
+        self._handle_steering(self.player, dt)
+        self._apply_movement(self.player, dt)
+        self._handle_wall_collisions(self.player)
 
         for ghost in self.ghosts:
             if ghost.state == GhostState.EATEN:
@@ -397,7 +396,7 @@ class GameModel(BaseModel):
 
         collisions_detected: list[int] = self._check_entity_collisions()
         for ghost_index in collisions_detected:
-            if not self.player or self.player.state == PlayerState.DEAD:
+            if self.player.state == PlayerState.DEAD:
                 break
 
             collided_ghost = self.ghosts[ghost_index]
@@ -430,7 +429,7 @@ class GameModel(BaseModel):
             self.state = GameState.LEVEL_COMPLETE
             return
 
-        if self.player and self.player.is_super:
+        if self.player.is_super:
             self.player.super_timer -= dt
 
             if self.player.super_timer <= 0:

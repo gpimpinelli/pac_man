@@ -19,6 +19,15 @@ class SpriteManager:
             Direction.RIGHT: self._load("pacman_right.xpm"),
         }
 
+        self.pacman_semi = {
+            Direction.UP: self._load("close_up.xpm"),
+            Direction.DOWN: self._load("close_down.xpm"),
+            Direction.LEFT: self._load("close_left.xpm"),
+            Direction.RIGHT: self._load("close_right.xpm"),
+        }
+
+        self.pacman_ball = self._load("pacman_ball.xpm")
+
         ghost_colors = ["red", "pink", "blu", "orange"]
         self.ghosts_normal = []
         for color in ghost_colors:
