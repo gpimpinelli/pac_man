@@ -185,7 +185,7 @@ class MazeAdapter:
             if current_coords == dest_cell.coords:
                 break
 
-            current = self.get_cell(current_coords[0], current_coords[0])
+            current = self.get_cell(current_coords[0], current_coords[1])
 
             if not current.has_wall_north:
                 n_coords = (current.coords[0], current.coords[1] - 1)

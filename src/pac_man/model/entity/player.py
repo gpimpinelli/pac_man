@@ -1,3 +1,4 @@
+from typing import Any
 from .entity import Entity
 from enum import Enum, auto
 
@@ -43,7 +44,7 @@ class Player(Entity):
     def remove_super(self) -> None:
         self.super_timer = 0.0
 
-    def update_intention(self, game_state) -> None:
+    def update_intention(self, game_state: Any) -> None:
         match self.state:
             case PlayerState.ALIVE:
                 ...

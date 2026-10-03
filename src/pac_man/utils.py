@@ -20,8 +20,8 @@ def cell_to_pixel(
 
 def center_in_pixel(
     coords: tuple[int, int], tile_size: int, size: int
-) -> tuple[float, float]:
+) -> tuple[int, int]:
     return (
-        coords[0] + (tile_size - size) // 2,
-        coords[1] + (tile_size - size) // 2
+        int(coords[0] + (tile_size - size) // 2),
+        int(coords[1] + (tile_size - size) // 2)
     )

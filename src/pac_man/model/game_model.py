@@ -223,6 +223,8 @@ class GameModel(BaseModel):
 
     def _check_entity_collisions(self) -> list[int]:
         """Check if entitis collides"""
+        if not self.player:
+            return
         hitbox_radius = self.tile_size * 0.4
 
         i = 0
@@ -239,6 +241,8 @@ class GameModel(BaseModel):
 
     def _check_and_eat_gum(self) -> None:
         """Check the current cell and eat the pac gum"""
+        if not self.player:
+            return
         col, row = pixel_to_cell(
             (self.player.x, self.player.y), (0, 0), self.tile_size
         )
@@ -278,18 +282,27 @@ class GameModel(BaseModel):
             self._load_level(is_first=False)
 
     def add_lives(self) -> None:
+        if not self.player:
+            return
         self.player.add_lives()
 
     def increase_speed(self) -> None:
+        if not self.player:
+            return
         print(f"[CHEAT] Player speed: {self.player.speed}")
         self.player.increase_player_speed()
         print(f"[CHEAT] Increased Player speed: {self.player.speed}")
 
     def toggle_invincible(self) -> None:
+        if not self.player:
+            return
         self.player.toggle_invincible()
         print(f"[CHEAT] Invincibility: {self.player.is_invincible}")
 
     def _handle_player_death(self) -> None:
+        if not self.player:
+            return
+
         self.player.lives -= 1
         self.player.state = PlayerState.DEAD
 
@@ -305,12 +318,14 @@ class GameModel(BaseModel):
                 base_time * (1.05**self.current_level_index)
             )
 
-    def update(self, dt: float):
+    def update(self, dt: float) -> None:
         """
         Update the player position and handle collisions.
         Args:
             dt: Delta time elapsed since the last frame, in seconds.
         """
+        if not self.player:
+            return
 
         if self.state not in (
             GameState.PLAYING,
@@ -426,7 +441,7 @@ class GameModel(BaseModel):
         if not self.player.is_super:
             self.player.multiplicator = 1.0
 
-    def _handle_steering(self, entity: Entity, dt: float):
+    def _handle_steering(self, entity: Entity, dt: float) -> None:
         if entity.desired_dir and entity.desired_dir != entity.current_dir:
             is_opposite = (
                 (
@@ -486,7 +501,7 @@ class GameModel(BaseModel):
                         entity.current_dir = entity.desired_dir
                         entity.desired_dir = None
 
-    def _apply_movement(self, entity: Entity, dt: float):
+    def _apply_movement(self, entity: Entity, dt: float) -> None:
         match entity.current_dir:
             case Direction.UP:
                 entity.y -= entity.speed * dt
@@ -497,7 +512,7 @@ class GameModel(BaseModel):
             case Direction.RIGHT:
                 entity.x += entity.speed * dt
 
-    def _handle_wall_collisions(self, entity: Entity):
+    def _handle_wall_collisions(self, entity: Entity) -> None:
         if entity.current_dir is not None:
             col, row = pixel_to_cell(
                 (entity.x, entity.y), (0, 0), self.tile_size
