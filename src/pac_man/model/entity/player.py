@@ -1,5 +1,6 @@
 from .entity import Entity
 from enum import Enum, auto
+from typing import Any
 
 
 class PlayerState(Enum):
@@ -9,7 +10,7 @@ class PlayerState(Enum):
 
 
 class Player(Entity):
-    lives: int
+    lives: int = 3
     score: int = 0
     multiplicator: int = 1
     super_timer: float = 0.0
@@ -46,8 +47,12 @@ class Player(Entity):
     def update_intention(self, game_state) -> None:
         match self.state:
             case PlayerState.ALIVE:
-                pass
+                ...
+
             case PlayerState.DYING:
-                pass
+                self.desired_dir = None
+                self.current_dir = None
+
             case PlayerState.DEAD:
-                pass
+                self.desired_dir = None
+                self.current_dir = None

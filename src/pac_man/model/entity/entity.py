@@ -19,3 +19,7 @@ class Entity(BaseModel, ABC):
     @abstractmethod
     def update_intention(self, game_state) -> None:
         pass
+
+    def reset_movement(self) -> None:
+        self.current_dir = None
+        self.desired_dir = None

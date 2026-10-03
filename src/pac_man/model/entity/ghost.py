@@ -4,6 +4,7 @@ from .entity import Entity
 from .direction import Direction
 from enum import Enum, auto
 from pac_man.utils import pixel_to_cell
+from typing import Any
 
 
 class GhostState(Enum):
@@ -72,7 +73,11 @@ class Ghost(Entity):
 
         self.desired_dir = best_dir
 
-    def update_intention(self, game_state) -> None:
+    def update_intention(self, game_state: Any) -> None:
+        if self.is_frozen:
+            self.desired_dir = None
+            return
+
         col, row = pixel_to_cell(
             (self.x, self.y), (0, 0), game_state.tile_size
         )
@@ -87,7 +92,7 @@ class Ghost(Entity):
         if cell is None or cell.is_solid:
             return
 
-        possible_dirs = []
+        possible_dirs: list[Direction] = []
         if not cell.has_wall_north:
             possible_dirs.append(Direction.UP)
         if not cell.has_wall_west:
@@ -117,31 +122,33 @@ class Ghost(Entity):
                 self.desired_dir = random.choice(possible_dirs)
 
             case GhostState.CHASE:
-                player_col, player_row = pixel_to_cell(
-                    (game_state.player.x, game_state.player.y),
-                    (0, 0),
-                    game_state.tile_size,
-                )
-                self._evaluate_path(
-                    game_state=game_state,
-                    possible_dirs=possible_dirs,
-                    cell_col=player_col,
-                    cell_row=player_row,
-                )
+                if game_state.player:
+                    player_col, player_row = pixel_to_cell(
+                        (game_state.player.x, game_state.player.y),
+                        (0, 0),
+                        game_state.tile_size,
+                    )
+                    self._evaluate_path(
+                        game_state=game_state,
+                        possible_dirs=possible_dirs,
+                        cell_col=player_col,
+                        cell_row=player_row,
+                    )
 
             case GhostState.FRIGHTENED:
-                player_col, player_row = pixel_to_cell(
-                    (game_state.player.x, game_state.player.y),
-                    (0, 0),
-                    game_state.tile_size,
-                )
-                self._evaluate_path(
-                    game_state=game_state,
-                    possible_dirs=possible_dirs,
-                    cell_col=player_col,
-                    cell_row=player_row,
-                    short=False,
-                )
+                if game_state.player:
+                    player_col, player_row = pixel_to_cell(
+                        (game_state.player.x, game_state.player.y),
+                        (0, 0),
+                        game_state.tile_size,
+                    )
+                    self._evaluate_path(
+                        game_state=game_state,
+                        possible_dirs=possible_dirs,
+                        cell_col=player_col,
+                        cell_row=player_row,
+                        short=False,
+                    )
 
             case GhostState.EATEN:
                 spawn_col, spawn_row = pixel_to_cell(
@@ -158,8 +165,3 @@ class Ghost(Entity):
 
         if self.current_dir is None:
             self.current_dir = self.desired_dir
-
-
-if __name__ == "__main__":
-    ghost = Ghost()
-    print(type(ghost), ghost)

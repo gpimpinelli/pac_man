@@ -106,11 +106,11 @@ class HighscoreManager(BaseModel):
             return False
         if len(self.scores) < 10:
             return True
-        return score > int(self.scores[-1]["score"])
+        return bool(score > int(self.scores[-1]["score"]))
 
     def add_score(self, name: str, score: int) -> bool:
 
-        def _score(x):
+        def _score(x) -> int:
             s = x.get("score")
             return s if isinstance(s, int) else 0
 

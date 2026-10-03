@@ -2,8 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 import mlx
 from .sprites_manager import SpriteManager
-from pac_man.model.entity import GhostState
-from ..model import Direction, GameModel, GameState
+from ..model import Direction, GameModel, GameState, GhostState
 from .colors import Colors
 from .layout import ViewLayout
 from .renderer import Renderer
@@ -295,10 +294,10 @@ ghost costs 1 life and respawns you in the center."""
             current_ghost_sprite = None
 
             if ghost.state in (GhostState.CHASE, GhostState.SCATTER):
-                g_dir = (
-                    ghost.current_dir if ghost.current_dir else Direction.UP
+                g_dir = ghost.current_dir if ghost.current_dir is not None else Direction.UP
+                current_ghost_sprite = self.sprites.ghosts_normal[i].get(
+                    g_dir, self.sprites.ghosts_normal[i][Direction.UP]
                 )
-                current_ghost_sprite = self.sprites.ghosts_normal[i][g_dir]
             elif ghost.state == GhostState.FRIGHTENED:
                 current_ghost_sprite = self.sprites.frightened
             elif ghost.state == GhostState.EATEN:

@@ -141,9 +141,12 @@ class GameModel(BaseModel):
             if ghost.state != GhostState.EATEN and ghost.state != new_state:
                 ghost.state = new_state
 
-    def _calc_rail(self, entity: Entity) -> tuple[int, int]:
+    def _calc_rail(self, entity: Entity) -> tuple[float, float]:
         col, row = pixel_to_cell((entity.x, entity.y), (0, 0), self.tile_size)
-        return ((col + 0.5) * self.tile_size, (row + 0.5) * self.tile_size)
+        return (
+            float((col + 0.5) * self.tile_size), 
+            float((row + 0.5) * self.tile_size)
+        )
 
     @property
     def menu_options(self) -> tuple[str, ...]:
@@ -211,16 +214,14 @@ class GameModel(BaseModel):
         self.state = GameState.DEATH_PAUSE
 
     def _freeze_game(self) -> None:
-        self.player.current_dir = None
-        self.player.desired_dir = None
+        if self.player:
+            self.player.reset_movement()
 
-        for ghost in self.ghosts:
-            ghost.current_dir = None
-            ghost.desired_dir = None
+        self._freeze_ghosts()
 
-    def freeze_ghosts(self) -> None:
+    def _freeze_ghosts(self) -> None:
         for ghost in self.ghosts:
-            ghost.freeze()
+            ghost.reset_movement()
 
     def _check_entity_collisions(self) -> list[int]:
         """Check if entitis collides"""
@@ -348,9 +349,11 @@ class GameModel(BaseModel):
                 if ghost.state == GhostState.SCATTER:
                     ghost.state = GhostState.CHASE
 
-        self._handle_steering(self.player, dt)
-        self._apply_movement(self.player, dt)
-        self._handle_wall_collisions(self.player)
+        if self.player:
+            self.player.update_intention(self)
+            self._handle_steering(self.player, dt)
+            self._apply_movement(self.player, dt)
+            self._handle_wall_collisions(self.player)
 
         for ghost in self.ghosts:
             if ghost.state == GhostState.EATEN:
@@ -368,8 +371,7 @@ class GameModel(BaseModel):
                 ):
 
                     ghost.x, ghost.y = ghost.coords_spawn
-                    ghost.current_dir = None
-                    ghost.desired_dir = None
+                    ghost.reset_movement()
                     ghost.respawn_timer = 2.0
                     continue
 
@@ -382,7 +384,7 @@ class GameModel(BaseModel):
 
         collisions_detected: list[int] = self._check_entity_collisions()
         for ghost_index in collisions_detected:
-            if self.player.state == PlayerState.DEAD:
+            if not self.player or self.player.state == PlayerState.DEAD:
                 break
 
             collided_ghost = self.ghosts[ghost_index]
@@ -415,7 +417,7 @@ class GameModel(BaseModel):
             self.state = GameState.LEVEL_COMPLETE
             return
 
-        if hasattr(self.player, "super_timer") and self.player.super_timer > 0:
+        if self.player and self.player.is_super:
             self.player.super_timer -= dt
 
             if self.player.super_timer <= 0:
@@ -424,7 +426,7 @@ class GameModel(BaseModel):
                 self.player.speed -= 25
 
         if not self.player.is_super:
-            self.player.multiplicator = 1
+            self.player.multiplicator = 1.0
 
     def _handle_steering(self, entity: Entity, dt: float):
         if entity.desired_dir and entity.desired_dir != entity.current_dir:
@@ -448,11 +450,9 @@ class GameModel(BaseModel):
             )
 
             if is_opposite:
-                if isinstance(entity, Player):
-                    entity.current_dir = entity.desired_dir
-                    entity.desired_dir = None
-                else:
-                    entity.desired_dir = None
+                entity.current_dir = entity.desired_dir
+                entity.desired_dir = None
+                return
             else:
                 can_turn = False
                 col, row = pixel_to_cell(

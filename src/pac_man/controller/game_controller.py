@@ -3,7 +3,6 @@ import time
 from typing import Any
 from enum import IntEnum
 from pydantic import BaseModel, Field
-
 from ..view import GameView
 from ..view.layout import ViewLayout
 from ..model import GameModel, Direction, GameState, PlayerState
@@ -81,7 +80,7 @@ class GameController:
         self.model.size = self.layout.sprite_offset
         self.setup_hooks()
 
-    def setup_hooks(self):
+    def setup_hooks(self) -> None:
         m = self.view.m
         win = self.view.win_ptr
 
@@ -112,7 +111,7 @@ class GameController:
         )
         m.mlx_loop_hook(self.view.mlx_ptr, self.update_game, None)
 
-    def close_game(self, *args):
+    def close_game(self, *args: Any) -> None:
         print("Closing game...")
         self.view.m.mlx_destroy_window(self.view.mlx_ptr, self.view.win_ptr)
         os._exit(0)
@@ -171,7 +170,7 @@ class GameController:
             self.model.state = GameState.PLAYING
             self.last_time = time.perf_counter()
 
-    def on_key_press(self, keycode: int, *args):
+    def on_key_press(self, keycode: int, *args: Any) -> None:
         action = self.KEYS_MAP.get(keycode)
 
         if self.model.state == GameState.PLAYING:
@@ -240,7 +239,7 @@ class GameController:
             ):
                 self.model.state = GameState.PLAYING
                 self.last_time = time.perf_counter()
-                return 0
+                return
 
             options = self.model.menu_options
             num_buttons = len(options) if options else 1
@@ -256,7 +255,7 @@ class GameController:
             elif keycode in (self.Key.ENTER, 13, self.Key.SPACE):
                 self._handle_menu_selection()
 
-        return 0
+        return
 
     def update_game(self, *args: Any) -> None:
         current_time = time.perf_counter()
