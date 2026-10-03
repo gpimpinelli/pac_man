@@ -7,7 +7,7 @@ with Cell objects, pellets, power pellets, and entity spawn points.
 from mazegenerator import MazeGenerator
 from dataclasses import dataclass
 from enum import IntFlag, auto
-from collections import deque 
+from collections import deque
 
 
 class Direction(IntFlag):
@@ -160,6 +160,61 @@ class MazeAdapter:
                 else:
                     cell.has_pacgum = True
                     self.total_pacgums += 1
+
+    def breath_first_search(
+        self,
+        start: tuple[int, int] = None,
+        dest: tuple[int, int] = None
+    ) -> None:
+
+        start_cell = self.get_cell(start[0], start[1])
+        dest_cell = self.get_cell(dest[0], dest[1])
+        if not start_cell or not dest_cell:
+            return []
+
+        came_from: dict[tuple[int, int], tuple[int, int] | None] = {}
+        queue = deque([start_cell])
+        came_from[start_cell.coords] = None
+
+        while queue:
+            current = queue.popleft()
+            if current.coords == dest_cell.coords:
+                break
+
+            if not current.has_wall_north:
+                n_coords = (current.coords[0], current.coords[1] - 1)
+                if n_coords not in came_from:
+                    queue.append(self.get_cell(n_coords[0], n_coords[1]))
+                    came_from[n_coords] = current.coords
+            if not current.has_wall_south:
+                n_coords = (current.coords[0], current.coords[1] + 1)
+                if n_coords not in came_from:
+                    queue.append(self.get_cell(n_coords[0], n_coords[1]))
+                    came_from[n_coords] = current.coords
+            if not current.has_wall_east:
+                n_coords = (current.coords[0] + 1, current.coords[1])
+                if n_coords not in came_from:
+                    queue.append(self.get_cell(n_coords[0], n_coords[1]))
+                    came_from[n_coords] = current.coords
+            if not current.has_wall_west:
+                n_coords = (current.coords[0] - 1, current.coords[1])
+                if n_coords not in came_from:
+                    queue.append(self.get_cell(n_coords[0], n_coords[1]))
+                    came_from[n_coords] = current.coords
+        
+        if dest_cell not in came_from:
+            return []
+
+        path: list[tuple[int, int]] = []
+        current_step: tuple[int, int] = dest_cell.coords
+
+        while current_step is not None:
+            path.append(current_step)
+            current_step = came_from.get(current_step)
+
+        path.reverse()
+        
+        return path
 
     def get_cell(self, x: int, y: int) -> Cell | None:
         """Returns the Cell at (x, y), or None if out of bounds.

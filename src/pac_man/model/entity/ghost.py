@@ -152,15 +152,19 @@ class Ghost(Entity):
                     )
 
             case GhostState.EATEN:
-                spawn_col, spawn_row = pixel_to_cell(
-                    self.coords_spawn, (0, 0), game_state.tile_size
+                current_cell = pixel_to_cell(
+                    (self.x, self.y), (0, 0), game_state.tile_size
                 )
-                self._evaluate_path(
-                    game_state=game_state,
-                    possible_dirs=possible_dirs,
-                    cell_col=spawn_col,
-                    cell_row=spawn_row,
-                )
+                #spawn_cell = game_state.maze.get_cell(self.coords_spawn[0], self.coords_spawn[1])
+                path = game_state.maze.breath_first_search(current_cell, self.coords_spawn)
+                print(path)
+                #self._evaluate_path(
+                #    game_state=game_state,
+                #    possible_dirs=possible_dirs,
+                #    cell_col=next_cell[0],
+                #    cell_row=next_cell[1],
+                #)
+
 
         self.last_decision_cell = (col, row)
 
