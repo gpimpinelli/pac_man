@@ -155,15 +155,33 @@ class Ghost(Entity):
                 current_cell = pixel_to_cell(
                     (self.x, self.y), (0, 0), game_state.tile_size
                 )
-                #spawn_cell = game_state.maze.get_cell(self.coords_spawn[0], self.coords_spawn[1])
-                path = game_state.maze.breath_first_search(current_cell, self.coords_spawn)
-                print(path)
-                #self._evaluate_path(
-                #    game_state=game_state,
-                #    possible_dirs=possible_dirs,
-                #    cell_col=next_cell[0],
-                #    cell_row=next_cell[1],
-                #)
+                spawn_cell = pixel_to_cell(
+                    self.coords_spawn, (0, 0), game_state.tile_size
+                )
+                
+                path = game_state.maze.breath_first_search(current_cell, spawn_cell)
+                
+                if path and len(path) > 1:
+                    next_step = path[1]
+                    dx = next_step[0] - current_cell[0]
+                    dy = next_step[1] - current_cell[1]
+
+                    target_dir = None
+                    if dx == 1:
+                        target_dir = Direction.RIGHT
+                    elif dx == -1:
+                        target_dir = Direction.LEFT
+                    elif dy == 1:
+                        target_dir = Direction.DOWN
+                    elif dy == -1:
+                        target_dir = Direction.UP
+
+                    if target_dir in possible_dirs:
+                        self.desired_dir = target_dir
+                    else:
+                        self.desired_dir = possible_dirs[0]
+                else:
+                    self.desired_dir = random.choice(possible_dirs)
 
 
         self.last_decision_cell = (col, row)

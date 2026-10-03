@@ -167,8 +167,12 @@ class MazeAdapter:
         dest: tuple[int, int] = None
     ) -> None:
 
+        if not (start and dest):
+            return []
+
         start_cell = self.get_cell(start[0], start[1])
         dest_cell = self.get_cell(dest[0], dest[1])
+
         if not start_cell or not dest_cell:
             return []
 
@@ -202,11 +206,11 @@ class MazeAdapter:
                     queue.append(self.get_cell(n_coords[0], n_coords[1]))
                     came_from[n_coords] = current.coords
         
-        if dest_cell not in came_from:
+        if dest_cell.coords not in came_from:
             return []
 
         path: list[tuple[int, int]] = []
-        current_step: tuple[int, int] = dest_cell.coords
+        current_step: tuple[int, int] | None = dest_cell.coords
 
         while current_step is not None:
             path.append(current_step)
