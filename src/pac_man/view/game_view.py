@@ -283,7 +283,7 @@ ghost costs 1 life and respawns you in the center."""
             current_pacman_sprite = self.sprites.pacman_ball
         else:
             p_dir = model.player.current_dir
-            is_close = (self.anim_tick // 2) % 2 == 0
+            is_close = (self.anim_tick // 6) % 2 == 0
             sprites_dict = (
                 self.sprites.pacman_semi if is_close else self.sprites.pacman
             )
