@@ -63,12 +63,10 @@ class GameModel(BaseModel):
 
     current_level_index: int = 9
 
-    # Disable assignment validation for performance during the 60fps loop
     model_config = ConfigDict(validate_assignment=False)
 
     @model_validator(mode="after")
     def create_entity(self):
-        # 1. Inizializza l'HighscoreManager
         self.highscore_manager = HighscoreManager(
             filepath=self.config_data.get(
                 "highscore_filename", "highscores.json"

@@ -7,6 +7,7 @@ with Cell objects, pellets, power pellets, and entity spawn points.
 from mazegenerator import MazeGenerator
 from dataclasses import dataclass
 from enum import IntFlag, auto
+from collections import deque
 
 
 class Direction(IntFlag):

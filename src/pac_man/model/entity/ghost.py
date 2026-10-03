@@ -8,10 +8,10 @@ from typing import Any
 
 
 class GhostState(Enum):
-    SCATTER = auto()  # Mosse casuali
-    CHASE = auto()  # Insegue Pac-Man
-    FRIGHTENED = auto()  # Blu e vulnerabile
-    EATEN = auto()  # Solo gli occhi che tornano alla base
+    SCATTER = auto()
+    CHASE = auto()
+    FRIGHTENED = auto()
+    EATEN = auto()
 
 
 class Ghost(Entity):
@@ -20,6 +20,7 @@ class Ghost(Entity):
     respawn_timer: float = 0.0
     is_frozen: bool = False
     initial_speed: float = 0.0
+
 
     @property
     def is_already_eaten(self) -> bool:
