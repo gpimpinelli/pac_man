@@ -89,11 +89,11 @@ class SpriteManager:
         path = os.path.join(self.sprites_dir, filename)
         if not os.path.isfile(path):
             raise FileNotFoundError(f"Sprite not found: '{path}'")
-        
+
         img_data = self.m.mlx_xpm_file_to_image(self.mlx_ptr, path)
         if not img_data or not img_data[0]:
             raise RuntimeError(f"File sprite corrupted or not valid: '{path}")
-        return img_data[0] 
+        return img_data[0]
 
     def _load_mini(self, filename: str) -> Any:
         """Load an XPM file from the minimap mini sprites folder.
@@ -107,7 +107,7 @@ class SpriteManager:
         path = os.path.join(self.mini_sprites_dir, filename)
         if not os.path.isfile(path):
             raise FileNotFoundError(f"Sprite not found: '{path}'")
-        
+
         img_data = self.m.mlx_xpm_file_to_image(self.mlx_ptr, path)
         if not img_data or not img_data[0]:
             raise RuntimeError(f"File sprite corrupted or not valid: '{path}")

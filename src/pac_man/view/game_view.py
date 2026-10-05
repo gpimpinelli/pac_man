@@ -108,7 +108,6 @@ ghost costs 1 life and respawns you in the center."""
         if not self.win_ptr:
             raise RuntimeError("Unable to create game window")
 
-
         self.img = self.m.mlx_new_image(
             self.mlx_ptr, self.config.width, self.config.height
         )

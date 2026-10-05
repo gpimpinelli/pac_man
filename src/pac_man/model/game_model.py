@@ -98,6 +98,8 @@ class GameModel(BaseModel):
 
     name_input: str = ""
 
+    level_time: float = 0.0
+
     level_time_remaining: float = 0.0
 
     level_transition_timer: float = 0.0
@@ -274,9 +276,10 @@ class GameModel(BaseModel):
             self._spawn_entities(self.ghosts[i], self.maze.ghost_spawns[i])
 
         base_time = self.config_data.get("level_max_time", 180)
-        self.level_time_remaining = (
+        self.level_time = (
             base_time * (1.05**self.current_level_index)
         )
+        self.level_time_remaining = self.level_time
 
     def _reset_game(self) -> None:
         """Reset player and ghost positions to spawn points and pause play."""
@@ -306,7 +309,7 @@ class GameModel(BaseModel):
         Returns:
             list[int]: Indices of colliding ghosts in self.ghosts.
         """
-        hitbox_radius = self.tile_size * 0.4
+        hitbox_radius = self.tile_size * 0.5
 
         i = 0
         collisions_detected: list[int] = []
@@ -345,11 +348,13 @@ class GameModel(BaseModel):
                 self.config_data["points_per_super_pacgum"]
                 * self.player.multiplicator
             )
+            if not self.player.is_super:
+                self.player.speed += 25
+
             self.player.super_timer = (
-                (self.config_data["level_max_time"] // 7) +
+                (self.level_time // 7) +
                 (1.5 * self.current_level_index)
             )
-            self.player.speed += 25
             self._change_ghosts_state(GhostState.FRIGHTENED)
             self.maze.total_pacgums -= 1
 
@@ -389,9 +394,10 @@ class GameModel(BaseModel):
             self._reset_game()
             # Reset level timer to maximum upon respawn
             base_time = self.config_data.get("level_max_time", 180)
-            self.level_time_remaining = (
+            self.level_time = (
                 base_time * (1.05**self.current_level_index)
             )
+            self.level_time_remaining = self.level_time
 
     def update(self, dt: float) -> None:
         """Advance game physics, handle input, AI steering, and collisions.
@@ -429,7 +435,8 @@ class GameModel(BaseModel):
             self._handle_player_death()
             return
 
-        if self.level_time_remaining < self.config_data["level_max_time"] - 7:
+        scatter_duration = 7.0 * (1.10 ** self.current_level_index)
+        if self.level_time_remaining < self.level_time - scatter_duration:
             for ghost in self.ghosts:
                 if ghost.state == GhostState.SCATTER:
                     ghost.state = GhostState.CHASE
