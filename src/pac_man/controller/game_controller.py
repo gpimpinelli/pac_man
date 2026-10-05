@@ -124,7 +124,7 @@ class GameController:
     def setup_hooks(self) -> None:
         """
         Register keyboard input, window close, and frame update hooks.
-        
+
         m.mlx_mouse_hide(self.view.mlx_ptr) hide the mouse cursor over the
         game window
 

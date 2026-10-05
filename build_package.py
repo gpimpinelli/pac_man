@@ -23,10 +23,12 @@ def create_package() -> None:
         shutil.rmtree(dist_dir)
     dist_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. Copy source code
+    # Copy source code
     shutil.copytree(root_dir / "src", dist_dir / "src")
 
-    # 2. Copy dependencies & wheels
+    # Copy dependencies & wheels
+    # Wheel is the standard pre-built distribution format
+    # is literally just a .zip file with a different extension
     wheels = (
         list(root_dir.glob("*.whl"))
         + list(root_dir.glob("mlx-2.2/**/*.whl"))
@@ -36,13 +38,13 @@ def create_package() -> None:
     for wheel in wheels:
         shutil.copy(wheel, wheels_dir / wheel.name)
 
-    # 3. Copy configuration and assets
+    # Copy configuration and assets
     shutil.copy(root_dir / "config.json", dist_dir / "config.json")
     shutil.copy(root_dir / "highscores.json", dist_dir / "highscores.json")
     shutil.copy(root_dir / "README.md", dist_dir / "README.md")
     shutil.copy(root_dir / "pac-man.py", dist_dir / "pac-man.py")
 
-    # 4. Create in-package platform launcher & instructions
+    # Create in-package platform launcher & instructions
     launcher_sh = dist_dir / "launch.sh"
     launcher_sh.write_text(
         "#!/usr/bin/env bash\n"
@@ -53,7 +55,7 @@ def create_package() -> None:
     )
     launcher_sh.chmod(0o755)
 
-    # 5. Compress into ZIP for Itch.io upload
+    # Compress into ZIP for Itch.io upload
     if zip_path.exists():
         zip_path.unlink()
 
