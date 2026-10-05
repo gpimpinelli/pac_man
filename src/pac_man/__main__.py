@@ -9,15 +9,20 @@ from .controller import GameController
 def main() -> None:
     """Validate command line arguments, load configuration, and start game."""
     argv = sys.argv
-    if len(argv) != 2:
+    if len(argv) == 2:
+        config_path = Path(argv[1])
+    elif len(argv) == 1 and Path("config.json").exists():
+        config_path = Path("config.json")
+    else:
         print(
-            "Usage: python3 pac-man.py <config.json>\n"
+            "Usage: pac-man <config.json>\n"
+            "   or: python3 -m pac_man <config.json>\n"
             "   or: make run"
         )
         return
 
     try:
-        config = ConfigParser(path=Path(argv[1]))
+        config = ConfigParser(path=config_path)
         game = GameController(config_data=config.data)
         game.run()
     except Exception as e:

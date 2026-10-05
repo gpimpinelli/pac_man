@@ -7,6 +7,8 @@ of the 42 subject.
 """
 
 import shutil
+import subprocess
+import sys
 import zipfile
 from pathlib import Path
 
@@ -15,59 +17,99 @@ def create_package() -> None:
     """Build a standalone release directory and zip archive for deployment."""
     root_dir = Path(__file__).parent.resolve()
     dist_dir = root_dir / "dist" / "pac-man-42"
+    dist_root = root_dir / "dist"
     zip_path = root_dir / "dist" / "pac-man-42-release.zip"
 
-    print("📦 Packaging Pac-Man 42 for distribution...")
+    print("[*] Packaging Pac-Man 42 for distribution...")
 
+    # 1. Compila il pacchetto in formato .whl
+    print("[*] Building pac_man wheel package...")
+    uv_cmd = shutil.which("uv")
+    if uv_cmd:
+        cmd = [uv_cmd, "build", "--wheel"]
+    else:
+        cmd = [sys.executable, "-m", "uv", "build", "--wheel"]
+
+    subprocess.run(cmd, cwd=root_dir, check=True)
+
+    # 2. Pulisce e ricrea dist/pac-man-42
     if dist_dir.exists():
         shutil.rmtree(dist_dir)
     dist_dir.mkdir(parents=True, exist_ok=True)
 
-    # Copy source code
-    shutil.copytree(root_dir / "src", dist_dir / "src")
-
-    # Copy dependencies & wheels
-    # Wheel is the standard pre-built distribution format
-    # is literally just a .zip file with a different extension
-    wheels = (
-        list(root_dir.glob("*.whl"))
-        + list(root_dir.glob("mlx-2.2/**/*.whl"))
-    )
+    # 3. Copia solo i file .whl nella cartella wheels
     wheels_dir = dist_dir / "wheels"
     wheels_dir.mkdir(exist_ok=True)
-    for wheel in wheels:
-        shutil.copy(wheel, wheels_dir / wheel.name)
 
-    # Copy configuration and assets
+    all_wheels = (
+        list(dist_root.glob("pac_man-*.whl"))
+        + list(root_dir.glob("*.whl"))
+        + list(root_dir.glob("mlx-2.2/**/*.whl"))
+    )
+    for wheel in all_wheels:
+        dest = wheels_dir / wheel.name
+        shutil.copy(wheel, dest)
+        print(f"    + {wheel.name}")
+
+    # 4. Copia solo configurazione e documentazione
     shutil.copy(root_dir / "config.json", dist_dir / "config.json")
-    shutil.copy(root_dir / "highscores.json", dist_dir / "highscores.json")
-    shutil.copy(root_dir / "README.md", dist_dir / "README.md")
-    shutil.copy(root_dir / "pac-man.py", dist_dir / "pac-man.py")
+    if (root_dir / "README.md").exists():
+        shutil.copy(root_dir / "README.md", dist_dir / "README.md")
 
-    # Create in-package platform launcher & instructions
+    # 5. Script di avvio per Linux/WSL e Windows
     launcher_sh = dist_dir / "launch.sh"
     launcher_sh.write_text(
         "#!/usr/bin/env bash\n"
-        "python3 -m pip install --no-index "
-        "--find-links=wheels mazegenerator mlx\n"
-        "python3 pac-man.py config.json\n",
+        "set -e\n"
+        'DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" '
+        '>/dev/null 2>&1 && pwd )"\n'
+        'cd "$DIR"\n\n'
+        "# Crea la venv locale se non esiste\n"
+        "if [ ! -d \".venv\" ]; then\n"
+        "    python3 -m venv .venv\n"
+        "fi\n\n"
+        "# Attiva la venv e installa i wheels direttamente lì\n"
+        "source .venv/bin/activate\n"
+        "pip install --no-index --find-links=wheels mazegenerator mlx "
+        "pac-man 2>/dev/null || \\\n"
+        "pip install --find-links=wheels mazegenerator mlx pac-man\n\n"
+        "# Avvia il gioco\n"
+        "pac-man config.json\n",
         encoding="utf-8",
     )
-    launcher_sh.chmod(0o755)
+    try:
+        launcher_sh.chmod(0o755)
+    except OSError:
+        pass
 
-    # Compress into ZIP for Itch.io upload
+    launcher_bat = dist_dir / "launch.bat"
+    launcher_bat.write_text(
+        "@echo off\r\n"
+        "cd /d %~dp0\r\n"
+        "if not exist \".venv\" (\r\n"
+        "    python -m venv .venv\r\n"
+        ")\r\n"
+        "call .venv\\Scripts\\activate.bat\r\n"
+        "pip install --no-index --find-links=wheels mazegenerator mlx "
+        "pac-man 2>nul || "
+        "pip install --find-links=wheels mazegenerator mlx pac-man\r\n"
+        "pac-man config.json\r\n"
+        "pause\r\n",
+        encoding="utf-8",
+    )
+
+    # 6. Crea lo ZIP per itch.io
     if zip_path.exists():
         zip_path.unlink()
 
+    print("[*] Creating release zip archive...")
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for file in dist_dir.rglob("*"):
             if file.is_file():
                 arcname = file.relative_to(dist_dir.parent)
                 zf.write(file, arcname)
 
-    print("✅ Package created successfully:")
-    print(f"   Directory: {dist_dir}")
-    print(f"   Archive:   {zip_path}")
+    print(f"[OK] Package created successfully: {zip_path}")
 
 
 if __name__ == "__main__":
