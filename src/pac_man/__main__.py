@@ -18,12 +18,12 @@ def main() -> None:
 
     try:
         config = ConfigParser(path=Path(argv[1]))
+        game = GameController(config_data=config.data)
+        game.run()
     except Exception as e:
-        print(f"[ERROR] Could not load config: {e}")
-        return
+        print(f"[FATAL ERROR] {e}")
+        sys.exit(1)
 
-    game = GameController(config_data=config.data)
-    game.run()
 
 
 if __name__ == "__main__":

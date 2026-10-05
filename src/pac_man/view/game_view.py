@@ -93,6 +93,8 @@ ghost costs 1 life and respawns you in the center."""
 
         self.m = mlx.Mlx()
         self.mlx_ptr = self.m.mlx_init()
+        if not self.mlx_ptr:
+            raise RuntimeError("Unable to connect to X11/MiniLibX display.")
 
         # Delegate sprite loading to SpriteManager
         self.sprites = SpriteManager(self.m, self.mlx_ptr)
@@ -103,6 +105,10 @@ ghost costs 1 life and respawns you in the center."""
             self.config.height,
             self.config.title
         )
+        if not self.win_ptr:
+            raise RuntimeError("Unable to create game window")
+
+
         self.img = self.m.mlx_new_image(
             self.mlx_ptr, self.config.width, self.config.height
         )

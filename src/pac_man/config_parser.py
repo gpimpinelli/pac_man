@@ -67,7 +67,7 @@ class ConfigParser(BaseModel):
                 self.data = {}
             else:
                 self.data = json.loads(content)
-        except json.JSONDecodeError as e:
+        except (json.JSONDecodeError, OSError) as e:
             print(
                 f"[CONFIG WARNING] Error parsing JSON: {e}. "
                 "Using all default values."
