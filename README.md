@@ -2,13 +2,20 @@
 
 # 🟡 Pac-Man 42
 
+[![itch.io](https://img.shields.io/badge/itch.io-Play%20%2F%20Download-fa5c5c?style=for-the-badge&logo=itchdotio&logoColor=white)](https://gipstudios.itch.io/pacman)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/gpimpinelli/pac_man)
+
 A complete, robust recreation of the legendary 1980 arcade game **Pac-Man**, implemented in Python 3.10+ using the **MiniLibX (mlx)** graphical library following a strict **Model-View-Controller (MVC)** software architecture. The game features procedurally generated mazes via external package integration, intelligent ghost state machines, a persistent highscore system, smooth frame-throttled rendering, and evaluation-ready cheat modes.
+
+> 🎮 **Published on itch.io!** Pac-Man 42 is officially published and available to download & play on itch.io:  
+> 👉 **[https://gipstudios.itch.io/pacman](https://gipstudios.itch.io/pacman)**
 
 ---
 
 ## 📖 Table of Contents
 
 - [Description](#-description)
+- [Play on itch.io & Packaging](#-play-on-itchio--packaging)
 - [Instructions & Setup](#-instructions--setup)
 - [Configuration](#-configuration)
 - [Highscore System](#-highscore-system)
@@ -31,6 +38,28 @@ A complete, robust recreation of the legendary 1980 arcade game **Pac-Man**, imp
 - **Classic Arcade AI:** Multi-state ghost behaviors with Breadth-First Search (BFS) shortest-path navigation for eaten ghost eyes returning to their home base.
 - **Fail-Safe Design:** Fault-tolerant JSON parser that gracefully handles missing files, malformed syntax, and out-of-range parameters with zero tracebacks.
 - **Evaluation-Ready Cheat Mode:** Peer-review debugging tools to toggle invincibility, skip levels, freeze ghosts, adjust speed, and grant extra lives.
+
+---
+
+## 🕹️ Play on itch.io & Packaging
+
+The project has been packaged and published to **itch.io** in compliance with **Chapter VII (Packaging and Distribution)** of the 42 subject:
+
+👉 **[https://gipstudios.itch.io/pacman](https://gipstudios.itch.io/pacman)**
+
+The published package bundles all standalone wheels, game assets, configuration, and a self-contained execution script.
+
+### Building the Distribution Package
+
+To build the standalone distribution archive yourself:
+
+```bash
+make package
+# or directly:
+uv run python build_package.py
+```
+
+This generates `dist/pac-man-42/` and a standalone uploadable archive `dist/pac-man-42-release.zip`.
 
 ---
 
@@ -75,6 +104,7 @@ uv run python -m src.pac_man path/to/custom_config.json
 |---|---|
 | `make install` | Installs project dependencies using `uv sync` |
 | `make run` | Launches the game with `config.json` |
+| `make package` | Builds standalone release package (ZIP & wheels) for distribution (itch.io) |
 | `make debug` | Runs the game under the Python debugger (`pdb`) |
 | `make clean` | Removes temporary caches (`__pycache__`, `.mypy_cache`, `uv` cache) |
 | `make lint` | Runs `flake8` and `mypy` with non-strict configuration |
