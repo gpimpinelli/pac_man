@@ -122,9 +122,21 @@ class GameController:
         return self.model.player
 
     def setup_hooks(self) -> None:
-        """Register keyboard input, window close, and frame update hooks."""
+        """
+        Register keyboard input, window close, and frame update hooks.
+        
+        m.mlx_mouse_hide(self.view.mlx_ptr) hide the mouse cursor over the
+        game window
+
+        In WSLg, Linux graphics are bridged to Windows via Microsoft's
+        Weston/RDP compositor. When an X11 application requests an empty,
+        invisible cursor, Windows' RDP driver intentionally renders a
+        semi-transparent
+        """
         m = self.view.m
         win = self.view.win_ptr
+
+        m.mlx_mouse_hide(self.view.mlx_ptr)
 
         m.mlx_hook(win, self.EventType.DESTROY, 0, self.close_game, None)
         m.mlx_hook(
