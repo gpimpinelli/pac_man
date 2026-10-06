@@ -45,16 +45,21 @@ class Ghost(Entity):
         """
         return self.state == GhostState.EATEN
 
-    def freeze(self) -> None:
-        """Toggle freeze cheat mode, pausing or restoring ghost speed."""
-        self.is_frozen = not self.is_frozen
-        if self.is_frozen:
-            if self.speed > 0:
-                self.initial_speed = self.speed
+    def set_frozen(self, frozen: bool) -> None:
+        """Set the frozen state idempotently."""
+        if frozen == self.is_frozen:
+            return
+        self.is_frozen = frozen
+        if frozen:
+            self.initial_speed = self.speed
             self.speed = 0.0
         else:
             self.speed = self.initial_speed
-        print(f"[CHEAT] Ghost speed: {self.speed}")
+
+    def freeze(self) -> None:
+        """Toggle freeze cheat mode."""
+        self.set_frozen(not self.is_frozen)
+        print(f"[CHEAT] speed: {self.speed}")
 
     def _evaluate_path(
         self,

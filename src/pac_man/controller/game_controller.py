@@ -136,8 +136,6 @@ class GameController:
         m = self.view.m
         win = self.view.win_ptr
 
-        m.mlx_mouse_hide(self.view.mlx_ptr)
-
         m.mlx_hook(win, self.EventType.DESTROY, 0, self.close_game, None)
         m.mlx_hook(
             win,
@@ -269,6 +267,7 @@ class GameController:
                 case self.Key.FIVE:
                     self.model.add_lives()
                 case self.Key.SIX:
+                    self.player.reset_movement()
                     self.model.state = GameState.DEATH_PAUSE
 
         elif self.model.state == GameState.DEATH_PAUSE:

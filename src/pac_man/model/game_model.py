@@ -283,25 +283,29 @@ class GameModel(BaseModel):
 
     def _reset_game(self) -> None:
         """Reset player and ghost positions to spawn points and pause play."""
-        self._freeze_game()
+        self.player.reset_movement()
         self.remove_super()
 
         self.player.x, self.player.y = self.player.coords_spawn
         for ghost in self.ghosts:
+            ghost.set_frozen(False)
+            ghost.reset_movement()
+            ghost.respawn_timer = 0.0
             ghost.state = GhostState.SCATTER
             ghost.x, ghost.y = ghost.coords_spawn
 
         self.state = GameState.DEATH_PAUSE
 
     def _freeze_game(self) -> None:
-        """Halt all entity movements immediately."""
+        """Stop movement (used at level complete)."""
         self.player.reset_movement()
-        self._freeze_ghosts()
+        for ghost in self.ghosts:
+            ghost.set_frozen(True)
 
     def _freeze_ghosts(self) -> None:
         """Halt all ghost movements immediately."""
         for ghost in self.ghosts:
-            ghost.reset_movement()
+            ghost.freeze()
 
     def _check_entity_collisions(self) -> list[int]:
         """Check for collisions between player and ghosts within hitbox radius.
@@ -393,10 +397,7 @@ class GameModel(BaseModel):
         else:
             self._reset_game()
             # Reset level timer to maximum upon respawn
-            base_time = self.config_data.get("level_max_time", 180)
-            self.level_time = (
-                base_time * (1.05**self.current_level_index)
-            )
+            # base_time = self.config_data.get("level_max_time", 180)
             self.level_time_remaining = self.level_time
 
     def update(self, dt: float) -> None:
@@ -424,8 +425,7 @@ class GameModel(BaseModel):
                     self._load_level(is_first=False)
             return
 
-        if self.state in (GameState.CHEAT_MODE, GameState.INSTRUCTIONS):
-            self._freeze_game()
+        if self.state == GameState.CHEAT_MODE:
             return
 
         self.level_time_remaining -= dt
@@ -435,8 +435,7 @@ class GameModel(BaseModel):
             self._handle_player_death()
             return
 
-        scatter_duration = 7.0 * (1.10 ** self.current_level_index)
-        if self.level_time_remaining < self.level_time - scatter_duration:
+        if self.level_time_remaining < self.config_data["level_max_time"] - 7:
             for ghost in self.ghosts:
                 if ghost.state == GhostState.SCATTER:
                     ghost.state = GhostState.CHASE
