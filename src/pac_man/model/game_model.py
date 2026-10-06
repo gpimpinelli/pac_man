@@ -435,7 +435,9 @@ class GameModel(BaseModel):
             self._handle_player_death()
             return
 
-        if self.level_time_remaining < self.config_data["level_max_time"] - 7:
+        scatter_duration = 7 * (1.10**self.current_level_index)
+
+        if self.level_time_remaining < self.level_time - scatter_duration:
             for ghost in self.ghosts:
                 if ghost.state == GhostState.SCATTER:
                     ghost.state = GhostState.CHASE
