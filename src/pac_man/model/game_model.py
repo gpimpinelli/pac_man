@@ -137,10 +137,7 @@ class GameModel(BaseModel):
         )
 
         half_tile = self.tile_size // 2
-        speed = 80 * (1.02**self.current_level_index)
-        self.player = Player(
-            lives=(self.config_data["lives"] - 1), speed=speed + 10
-        )
+        self.player = Player(lives=(self.config_data["lives"] - 1))
 
         x_pixel = float(spawn_x + half_tile)
         y_pixel = float(spawn_y + half_tile)
@@ -158,12 +155,11 @@ class GameModel(BaseModel):
                 Ghost(
                     x=x_pixel,
                     y=y_pixel,
-                    speed=speed,
                     state=GhostState.SCATTER,
                     coords_spawn=(x_pixel, y_pixel),
                 )
             )
-            speed += 2
+        self._apply_level_speeds()
         return self
 
     def _spawn_entities(
@@ -242,6 +238,16 @@ class GameModel(BaseModel):
         self.player.remove_super()
         self._change_ghosts_state(GhostState.CHASE)
 
+    def _apply_level_speeds(self) -> None:
+        """Set player and ghost speeds from the current level's base speed.
+
+        Discards any cheat-mode speed boost or leftover super-mode bonus.
+        """
+        base_speed = 80 * (1.02**self.current_level_index)
+        self.player.speed = base_speed + 10
+        for i, ghost in enumerate(self.ghosts):
+            ghost.speed = base_speed + 2 * i
+
     def _load_level(self, is_first: bool = False) -> None:
         """Load and initialize a maze level from configuration.
 
@@ -268,12 +274,20 @@ class GameModel(BaseModel):
         else:
             seed = random.randint(0, 100000)
 
+        # Reset Game
+        # ====================================================================
         self._reset_game()
         self.maze = MazeAdapter(width=w, height=h, seed=seed)
 
+        # Spawn Entities
+        # ====================================================================
         self._spawn_entities(self.player, self.maze.player_spawn)
         for i in range(len(self.ghosts)):
             self._spawn_entities(self.ghosts[i], self.maze.ghost_spawns[i])
+
+        # Apply Level Speeds
+        # ====================================================================
+        self._apply_level_speeds()
 
         base_time = self.config_data.get("level_max_time", 180)
         self.level_time = (

@@ -21,7 +21,7 @@ class Entity(BaseModel, ABC):
     x: float = 0.0
     y: float = 0.0
 
-    speed: float = 125.0
+    speed: float = 80.0
     current_dir: Optional[Direction] = None
     desired_dir: Optional[Direction] = None
     coords_spawn: tuple[float, float] = (0, 0)
