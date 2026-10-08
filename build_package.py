@@ -22,7 +22,7 @@ def create_package() -> None:
 
     print("[*] Packaging Pac-Man 42 for distribution...")
 
-    # 1. Compila il pacchetto in formato .whl
+    # Complie the package with the .whl extension
     print("[*] Building pac_man wheel package...")
     uv_cmd = shutil.which("uv")
     if uv_cmd:
@@ -32,12 +32,12 @@ def create_package() -> None:
 
     subprocess.run(cmd, cwd=root_dir, check=True)
 
-    # 2. Pulisce e ricrea dist/pac-man-42
+    # Clean and rebuild dist/pac-man-42
     if dist_dir.exists():
         shutil.rmtree(dist_dir)
     dist_dir.mkdir(parents=True, exist_ok=True)
 
-    # 3. Copia solo i file .whl nella cartella wheels
+    # Copy only .whl files in the wheels folder
     wheels_dir = dist_dir / "wheels"
     wheels_dir.mkdir(exist_ok=True)
 
@@ -51,12 +51,12 @@ def create_package() -> None:
         shutil.copy(wheel, dest)
         print(f"    + {wheel.name}")
 
-    # 4. Copia solo configurazione e documentazione
+    # Copy documentation and configuration
     shutil.copy(root_dir / "config.json", dist_dir / "config.json")
     if (root_dir / "README.md").exists():
         shutil.copy(root_dir / "README.md", dist_dir / "README.md")
 
-    # 5. Script di avvio per Linux/WSL e Windows
+    # Start script for Linux/WSL and Windows
     launcher_sh = dist_dir / "launch.sh"
     launcher_sh.write_text(
         "#!/usr/bin/env bash\n"
@@ -98,7 +98,7 @@ def create_package() -> None:
         encoding="utf-8",
     )
 
-    # 6. Crea lo ZIP per itch.io
+    # Create the ZIP file for itch.io
     if zip_path.exists():
         zip_path.unlink()
 

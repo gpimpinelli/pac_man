@@ -132,5 +132,4 @@ class Renderer:
                     # max(default, value -> 1/8 of the cell)
                     size = max(4, tile_size // 6)
                     px, py = center_in_pixel((cx, cy), tile_size, size)
-                    # TODO change the color
                     draw_rect((px, py), size, size, Colors.SUPER_PACGUM)
