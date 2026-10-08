@@ -1,0 +1,37 @@
+/* XPM */
+static char *red_up[] = {
+/* columns rows colors chars-per-pixel */
+"10 10 21 1 ",
+"  c None",
+". c #FF0000",
+"X c #FF0200",
+"o c #FF0303",
+"O c #FF0505",
+"+ c #FF0A06",
+"@ c #FF0E0F",
+"# c #FB1A1D",
+"$ c #FF2020",
+"% c #B4215E",
+"& c #EC3B4A",
+"* c #FE4D4D",
+"= c #FF817F",
+"- c #0D16DC",
+"; c #4D30C2",
+": c #92429A",
+"> c #CE80A6",
+", c #F2A2AA",
+"< c #A7B0F5",
+"1 c #C3ABD9",
+"2 c #FEC9C7",
+/* pixels */
+"   XXXX   ",
+"  +XXXX+  ",
+" &:%XX%:& ",
+" >-;##;-> ",
+" ,<1$$1<, ",
+"X*2=OO,2*X",
+"XX@XXXX@XX",
+"XXXXXXXXXX",
+"XXXXXXXXXX",
+"X  X  X  X"
+};

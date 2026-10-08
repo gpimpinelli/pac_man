@@ -1,0 +1,27 @@
+{
+    // =======================================================================
+    // Test configuration with edge cases, faulty values, and missing fields
+    // =======================================================================
+    # Hash-style comments must be handled and ignored cleanly
+    "unknown_debug_key": "this_should_be_ignored_silently",
+
+    // Faulty numeric values (out of range, negative, invalid types):
+    "lives": -5,                    // Below min (1) -> should clamp to 1
+    "seed": true,                   // Boolean instead of int -> fallback to 42
+    "level_max_time": 3,            // Below min (10) -> clamp to 10
+    "points_per_pacgum": "invalid", // String instead of int -> fallback to 10
+    "points_per_super_pacgum": -99, // Below min (0) -> clamp to 0
+    "points_per_ghost": 999999,     // Above max (100000) -> clamp to 100000
+
+    // Faulty highscore filename (whitespace only -> fallback to 'highscores.json'):
+    "highscore_filename": "   ",
+
+    // Levels list with fewer than 10 levels, invalid elements, and even dimensions:
+    "levels": [
+        { "width": 16, "height": 16 },    // Even dimensions -> adjusted to 17x17
+        { "width": 10, "height": 10 },    // Below 15 -> clamped to 15x15
+        "corrupted_level_item",           // Invalid object -> fallback to 15x15
+        { "width": 21, "height": 21 }     // Valid level
+    ]
+    // Note: only 4 levels provided, so 6 default levels must be generated to reach 10!
+}

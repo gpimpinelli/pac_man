@@ -1,0 +1,34 @@
+/* XPM */
+static char *pacman_right[] = {
+/* columns rows colors chars-per-pixel */
+"10 10 18 1 ",
+"  c None",
+". c #CECE00",
+"X c #CECF00",
+"o c #D3D300",
+"O c #DDDD00",
+"+ c #DFDF00",
+"@ c #E2E200",
+"# c #E4E400",
+"$ c #E5E500",
+"% c #E6E600",
+"& c #E8E800",
+"* c #EBEB00",
+"= c #EDED00",
+"- c #F4F400",
+"; c #F7F700",
+": c #F8F800",
+"> c #F9F900",
+", c #FAFA00",
+/* pixels */
+"   .@OO   ",
+"  *-,,-#  ",
+" #,,,,=   ",
+" -,,,#    ",
+"o,,,@     ",
+"o,,,@     ",
+" -,,-#    ",
+" #,,,,=   ",
+"  #-,,-#  ",
+"   .@OO   "
+};

@@ -1,0 +1,33 @@
+[project]
+name = "pac-man"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Giovanni Pecelli", email = "imgiovannipecelli@protonmail.com" },
+    { name = "Gianluca Pimpinelli", email = "gianluca.pimpinelli@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "mazegenerator",
+    "mlx",
+    "pydantic>=2.13.5",
+]
+
+[project.scripts]
+pac-man = "pac_man.__main__:main"
+
+[build-system]
+requires = ["uv_build>=0.12.10,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+mazegenerator = { path = "mazegenerator-2.1.0-py3-none-any.whl" }
+mlx = { path = "mlx-2.2/ubuntu/mlx-2.2-py3-none-any.whl" }
+
+[dependency-groups]
+dev = [
+    "black>=26.5.1",
+    "flake8>=7.4.1",
+    "mypy>=2.4.0",
+]
