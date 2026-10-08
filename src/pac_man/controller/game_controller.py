@@ -2,6 +2,7 @@
 
 import os
 import time
+import signal
 from typing import Any
 from enum import IntEnum
 from pydantic import BaseModel, Field
@@ -133,6 +134,7 @@ class GameController:
         invisible cursor, Windows' RDP driver intentionally renders a
         semi-transparent
         """
+        signal.signal(signal.SIGINT, self._handle_sigint)
         m = self.view.m
         win = self.view.win_ptr
 
@@ -162,6 +164,16 @@ class GameController:
             None,
         )
         m.mlx_loop_hook(self.view.mlx_ptr, self.update_game, None)
+
+    def _handle_sigint(self, signum: int, frame: Any) -> None:
+        """Force a clean application exit upon receiving a SIGINT signal.
+
+        Args:
+            signum (int): The specific signal number received from the OS.
+            frame (Any): The current stack frame at the time of interruption.
+        """
+        print("\n[SIGINT] CTRL+C received. Terminating the program...")
+        self.close_game()
 
     def close_game(self, *args: Any) -> None:
         """Terminate the game window and exit application cleanly.
