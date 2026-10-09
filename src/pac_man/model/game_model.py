@@ -243,7 +243,7 @@ class GameModel(BaseModel):
 
         Discards any cheat-mode speed boost or leftover super-mode bonus.
         """
-        base_speed = 80 * (1.02**self.current_level_index)
+        base_speed = 90 * (1.02**self.current_level_index)
         self.player.speed = base_speed + 10
         for i, ghost in enumerate(self.ghosts):
             ghost.speed = base_speed + 2 * i

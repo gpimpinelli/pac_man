@@ -65,8 +65,7 @@ class Player(Entity):
 
     def add_lives(self) -> None:
         """Increase player lives by 1 up to a maximum cap of 7."""
-        if self.lives < 7:
-            self.lives += 1
+        self.lives += 1
 
     def increase_player_speed(self) -> None:
         """Increase movement speed by 10 up to a maximum cap of 300."""

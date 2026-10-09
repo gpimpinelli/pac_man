@@ -277,7 +277,8 @@ class GameController:
                 case self.Key.FOUR:
                     self.model.increase_speed()
                 case self.Key.FIVE:
-                    self.model.add_lives()
+                    if self.model.player.lives < 5:
+                        self.model.add_lives()
                 case self.Key.SIX:
                     self.player.reset_movement()
                     self.model.state = GameState.DEATH_PAUSE
